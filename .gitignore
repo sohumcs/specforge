@@ -21,3 +21,4 @@ test-results/
 kubeconfig*
 *.pem
 .DS_Store
+*.egg-info/

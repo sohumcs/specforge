@@ -81,3 +81,17 @@ All model pages were verified on Hugging Face on 2026-11-26. The exact spaCy mod
 ## ADR-013 — Local tooling on Windows: run `make`/Ansible from WSL Ubuntu
 **Context.** This machine has Docker, Terraform, kubectl, gh, Python 3.13 and Node 22. `make` and Ansible aren't installed on Windows, and Ansible has no native Windows control node.
 **Decision.** Document `make dev` for Linux/macOS/WSL (WSL Ubuntu is installed here) and provide a `scripts/dev.ps1` equivalent. Ansible runs from WSL or from CI.
+
+## ADR-014 — Sync SQLAlchemy 2.0 + psycopg 3, shared by API and workers
+**Status:** Accepted · 2026-11-26 (Phase 2)
+**Decision.** Sync sessions everywhere. FastAPI runs sync endpoints in its threadpool, and Celery tasks are sync, so the API and the workers share the same service functions (`app/services/*`), and those functions are tested once.
+**Rejected.** Async SQLAlchemy + asyncpg. It's faster under very high concurrency, but it would need a second code path for Celery, and the demo's traffic doesn't need it.
+
+## ADR-015 — RBAC: non-members get 404, under-privileged members get 403
+**Status:** Accepted · 2026-11-26
+**Decision.** `app/services/access.py` resolves node → blueprint → project, then checks the caller's role. Non-members get `404` so project IDs can't be probed. Members whose role is too low get `403 FORBIDDEN` with `details.required`. Admins bypass the check. `tests/test_rbac.py` runs a 14-action × 5-role matrix.
+
+## ADR-016 — Change-impact as one recursive CTE over a "directed view" of edges
+**Status:** Accepted · 2026-11-26
+**Decision.** `app/services/graph.py::_WALK_SQL` first builds `directed(src,dst)`: forward edge types as stored, plus `threatens`/`depends_on` reversed. A recursive walk over that view carries a `path` array to cut cycles, with `max_graph_depth` (12) as a hard cap, and returns each node's *minimum* hop distance. Upstream trace is the same query with the two direction sets swapped. Stale-marking and the `change_events` row are written in the same transaction as the edit.
+**Rejected.** Walking the graph in Python (N+1 queries). Postgres `CYCLE` clause (less obvious to readers than an explicit path array).
