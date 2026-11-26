@@ -24,6 +24,7 @@ export default defineConfig({
   build: { sourcemap: true, chunkSizeWarningLimit: 900 },
   test: {
     environment: 'jsdom',
+    include: ['src/**/*.test.{ts,tsx}'], // e2e/*.spec.ts belong to Playwright
     setupFiles: ['./src/test/setup.ts'],
     css: false,
     coverage: { provider: 'v8', include: ['src/**'], exclude: ['src/test/**'] },

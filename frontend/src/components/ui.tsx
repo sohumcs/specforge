@@ -127,13 +127,13 @@ export function ProviderBadge({ provider }: { provider: string | null }) {
   )
 }
 
-export function ScoreGauge({ score, size = 120 }: { score: number | null; size?: number }) {
+export function ScoreGauge({ score, size = 120, decorative = false }: { score: number | null; size?: number; decorative?: boolean }) {
   const r = 46
   const circ = 2 * Math.PI * r
   const value = score ?? 0
   const color = score === null ? '#94a3b8' : value >= 90 ? '#059669' : value >= 75 ? '#d97706' : '#e11d48'
   return (
-    <figure className="flex flex-col items-center" aria-label={score === null ? 'Not scored yet' : `Quality score ${value} out of 100`}>
+    <figure className="flex flex-col items-center" aria-hidden={decorative || undefined} aria-label={decorative ? undefined : score === null ? 'Not scored yet' : `Quality score ${value} out of 100`}>
       <svg width={size} height={size} viewBox="0 0 120 120" role="img" aria-hidden>
         <circle cx="60" cy="60" r={r} fill="none" stroke="#e2e8f0" strokeWidth="10" />
         <circle

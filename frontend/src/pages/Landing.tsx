@@ -145,8 +145,11 @@ export default function Landing() {
           </a>
           .
         </p>
-        <Card className="mt-6 overflow-x-auto p-4">
-          <ArchitectureDiagram />
+        <Card className="mt-6 p-0">
+          {/* Focusable so keyboard users can scroll the diagram on narrow screens (axe: scrollable-region-focusable). */}
+          <div role="region" aria-label="Architecture diagram (scrollable)" tabIndex={0} className="overflow-x-auto p-4">
+            <ArchitectureDiagram />
+          </div>
         </Card>
         <ul className="mt-6 flex flex-wrap gap-2" aria-label="Technology stack">
           {STACK.map((t) => (

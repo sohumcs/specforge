@@ -1,0 +1,134 @@
+# SPECForge local full stack:  make dev   (or: docker compose up -d --build)
+#
+#   web     nginx: React SPA + reverse proxy to api        -> http://localhost:8080
+#   api     FastAPI (uvicorn, 2 workers)
+#   worker  Celery (threads pool, ML models baked into the image)
+#   beat    Celery beat (nightly sandbox reset)
+#   migrate one-shot: alembic upgrade head
+#   seed    one-shot: demo user + sandbox with verified sample blueprints
+#   postgres 16 + pgvector, redis 7
+#
+# LLM keys are read from backend/.env (git-ignored) if it exists; without keys
+# the app runs entirely on the offline DemoProvider. Set LLM_PROVIDERS='["demo"]'
+# for deterministic runs (Playwright in CI does).
+
+name: specforge
+
+x-backend: &backend
+  image: ${BACKEND_IMAGE:-specforge-backend:dev}
+  build:
+    context: ./backend
+    args:
+      GIT_SHA: ${GIT_SHA:-dev}
+  env_file:
+    - path: ./backend/.env
+      required: false
+  environment: &backend-env
+    ENVIRONMENT: ${ENVIRONMENT:-development}
+    DATABASE_URL: postgresql+psycopg://specforge:${POSTGRES_PASSWORD:-specforge}@postgres:5432/specforge
+    REDIS_URL: redis://redis:6379/0
+    JWT_SECRET: ${JWT_SECRET:-local-dev-secret-not-for-production-0123456789}
+    COOKIE_SECURE: "false"
+    CORS_ORIGINS: '["http://localhost:8080"]'
+    LLM_PROVIDERS: ${LLM_PROVIDERS:-["gemini","groq"]}
+    GENERATE_LIMIT_PER_USER_HOUR: ${GENERATE_LIMIT_PER_USER_HOUR:-10}
+    GENERATE_LIMIT_PER_IP_HOUR: ${GENERATE_LIMIT_PER_IP_HOUR:-6}
+    DEMO_LOGIN_LIMIT_PER_IP_HOUR: ${DEMO_LOGIN_LIMIT_PER_IP_HOUR:-30}
+    GIT_SHA: ${GIT_SHA:-dev}
+    LOG_LEVEL: INFO
+  read_only: true
+  tmpfs: [/tmp]
+  security_opt: [no-new-privileges:true]
+  cap_drop: [ALL]
+  restart: unless-stopped
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: specforge
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-specforge}
+      POSTGRES_DB: specforge
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U specforge -d specforge"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory", "128mb", "--maxmemory-policy", "noeviction"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  migrate:
+    <<: *backend
+    command: ["alembic", "upgrade", "head"]
+    restart: "no"
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  seed:
+    <<: *backend
+    command: ["python", "-m", "app.seed"]
+    restart: "no"
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+
+  api:
+    <<: *backend
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+    expose: ["8000"]
+
+  worker:
+    <<: *backend
+    command: ["celery", "-A", "app.worker.celery_app", "worker", "-P", "threads", "-c", "2",
+              "-l", "INFO", "--without-gossip", "--without-mingle", "-Q", "specforge"]
+    healthcheck:
+      test: ["CMD", "celery", "-A", "app.worker.celery_app", "inspect", "ping", "--timeout", "5"]
+      interval: 30s
+      timeout: 15s
+      start_period: 60s
+      retries: 3
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+
+  beat:
+    <<: *backend
+    command: ["celery", "-A", "app.worker.celery_app", "beat", "-l", "INFO",
+              "-s", "/tmp/celerybeat-schedule", "--pidfile", "/tmp/celerybeat.pid"]
+    healthcheck: { disable: true }
+    depends_on:
+      redis: { condition: service_healthy }
+
+  web:
+    image: ${WEB_IMAGE:-specforge-web:dev}
+    build: ./frontend
+    ports: ["${WEB_PORT:-8080}:8080"]
+    environment:
+      API_UPSTREAM: api:8000
+    read_only: true
+    # nginx-unprivileged runs as uid 101: its writable tmpfs mounts must belong to
+    # it, or the envsubst step can't render the config and nothing listens on 8080.
+    tmpfs:
+      - /tmp:uid=101,gid=101
+      - /var/cache/nginx:uid=101,gid=101
+      - /etc/nginx/conf.d:uid=101,gid=101
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    depends_on:
+      api: { condition: service_healthy }
+    restart: unless-stopped
+
+volumes:
+  pgdata:

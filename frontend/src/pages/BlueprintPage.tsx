@@ -108,7 +108,7 @@ export default function BlueprintPage() {
             <p className="text-xs text-slate-500">{graph.data ? `${graph.data.nodes.length} nodes · ${graph.data.edges.length} links` : '…'}</p>
           </div>
           <button type="button" onClick={() => setParam({ tab: 'quality' })} className="ml-auto flex items-center gap-2 rounded-lg px-2 py-1 hover:bg-slate-50" aria-label={`Quality score ${bp.data.quality_score ?? 'not available'}, open quality panel`}>
-            <ScoreGauge score={bp.data.quality_score} size={44} />
+            <ScoreGauge score={bp.data.quality_score} size={44} decorative />
             <span className="text-left text-xs leading-tight text-slate-600">Quality<br />{openIssues.length} open issues</span>
           </button>
         </div>

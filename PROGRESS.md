@@ -10,8 +10,9 @@ Resume a session by reading this file + `../Web/new-portfolio/SPECFORGE_BUILD_PR
 | 3. AI pipeline | ✅ done 2026-11-26: 190 tests green, 95 % coverage, live E2E proven |
 | 4. Verification engine | ✅ done 2026-11-26: 269 tests green, 94 % coverage, live E2E smoke passes |
 | 5. Frontend | ✅ done 2026-11-26: verified in a real browser; 28 Vitest + 280 pytest tests |
-| 6. Local full stack | ⏳ next |
-| 7–10 | not started |
+| 6. Local full stack | ✅ done 2026-11-26: compose stack healthy, Playwright 17/17 passing (3 consecutive runs) |
+| 7. CI | ⏳ next |
+| 8–10 | not started |
 
 ## Decisions made by Sohum
 - Repo `sohumcs/specforge` is **public**.
@@ -65,6 +66,23 @@ cd backend && python -m venv .venv && .venv/Scripts/pip install -e ".[dev]" && .
 - Checked in a real browser against the real API + worker: demo login → sample graph → select/trace → edit REQ-006 → 4 nodes stale + amber wave → regenerate (LLM) → contradiction resolved, score 92 → 98 → Fix with AI (CRUD) → kanban drag → status page → new brief generated end-to-end (Groq answered after Gemini's per-minute quota).
 - Tests: backend 280 (pytest, 94 % coverage), frontend 28 (Vitest + Testing Library); eslint, tsc, ruff, mypy, bandit clean.
 
+## Phase 6 — what exists
+- `backend/Dockerfile`: one image (api/worker/beat/migrate/seed), CPU torch, models baked in (`HF_HUB_OFFLINE`), non-root, ~0.9 GB. `backend/requirements.lock` + `requirements-dev.lock` from `scripts/lock.sh` (uv, universal amd64/arm64, CUDA excluded).
+- `frontend/Dockerfile`: nginx-unprivileged serving the SPA and proxying the API (SSE unbuffered, security headers + CSP, `/metrics` hidden).
+- `docker-compose.yml`: postgres+pgvector, redis, migrate → seed (one-shots), api, worker, beat, web on :8080; read-only root FS, `cap_drop: ALL`, healthchecks. Keys come from `backend/.env` if present.
+- `make dev | down | clean | logs | seed | e2e | e2e-ci | test | lint`; `scripts/dev.ps1` does the same on Windows.
+- Playwright (`frontend/e2e/`): full flow (register → project → generate → quality → fix → edit → impact → regenerate → kanban → export MD+PDF), recruiter demo path (< 10 s), axe WCAG A/AA checks on landing + workspace tabs, probes through the proxy; desktop + mobile (Pixel 7) projects.
+- Result against the compose stack in CI mode (`LLM_PROVIDERS=["demo"]`): **17/17 passing (3 consecutive runs)**.
+- Real bugs the e2e/axe run caught: a scrollable diagram that keyboard users couldn't scroll, a redundant nested ARIA label on the header gauge, plus the two nginx container gotchas (ADR-034).
+
+## One-command local run
+```
+make dev                  # Linux/macOS/WSL
+.\scripts\dev.ps1         # Windows PowerShell
+# -> http://localhost:8080   (API docs: /docs)
+make e2e-ci               # deterministic Playwright run (offline LLM)
+```
+
 ## Run the UI locally
 ```
 cd backend && .venv/Scripts/uvicorn app.main:app --port 8000
@@ -95,5 +113,5 @@ Torch comes from the CPU index: `pip install torch --index-url https://download.
 | Phase 8 | Oracle Cloud Free Tier account + API signing key; DuckDNS (sign in with GitHub) + token; UptimeRobot free account |
 | Phase 9 | Confirm the AWS student account type; sign in and generate credentials when we get there |
 
-## Next: Phase 6 (local full stack)
-Dockerfiles (api/worker image with CPU torch + baked models, nginx frontend image), docker-compose.yml (postgres+pgvector, redis, migrate, seed, api, worker, beat, web), `make dev` / `scripts/dev.ps1`, Playwright e2e of sign in → generate → verify → edit → impact → export against compose (CI-friendly: `LLM_PROVIDERS=["demo"]`).
+## Next: Phase 7 (CI)
+GitHub Actions on PR: ruff + mypy, eslint + tsc, pytest with coverage gate (80 % on rule engine / graph / auth / scoring), vitest, bandit, pip-audit + npm audit, gitleaks, docker build, Trivy (fail on fixable HIGH/CRITICAL), terraform checks (once infra exists), Playwright against `docker compose` (`make e2e-ci`). Dependabot. Branch protection on main.
