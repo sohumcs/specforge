@@ -1,0 +1,883 @@
+{
+ "slug": "food-delivery",
+ "title": "Food delivery marketplace",
+ "brief": "A food delivery marketplace for a mid-sized city. Customers browse nearby restaurants, filter by cuisine and rating, build a cart, pay online by card or UPI, and track their rider live on a map. Restaurants manage menus, opening hours and item availability, and accept or reject incoming orders. Riders go online, receive delivery offers, pick up orders and mark them delivered. Admins handle refunds, disputes and restaurant onboarding. The app must cope with dinner-time peaks and keep payment data secure.",
+ "keywords": [
+  "food",
+  "delivery",
+  "restaurant",
+  "restaurants",
+  "rider",
+  "riders",
+  "meal",
+  "meals",
+  "menu",
+  "menus"
+ ],
+ "generated_by": "gemini",
+ "stage_providers": {
+  "requirements": "gemini",
+  "design": "gemini",
+  "tests": "gemini"
+ },
+ "generated_at": "2026-11-26",
+ "draft": {
+  "requirements": {
+   "requirements": [
+    {
+     "ref": "R1",
+     "kind": "functional",
+     "nfr_category": "none",
+     "title": "Restaurant discovery and filtering",
+     "description": "Customers must be able to browse nearby restaurants and filter them by cuisine type and rating.",
+     "priority": "must"
+    },
+    {
+     "ref": "R2",
+     "kind": "functional",
+     "nfr_category": "none",
+     "title": "Order placement and cart management",
+     "description": "Customers must be able to add menu items to a cart, build an order, and pay securely online using card or UPI.",
+     "priority": "must"
+    },
+    {
+     "ref": "R3",
+     "kind": "functional",
+     "nfr_category": "none",
+     "title": "Restaurant order and menu management",
+     "description": "Restaurants must be able to manage their menus, update item availability, and accept or reject incoming orders.",
+     "priority": "must"
+    },
+    {
+     "ref": "R4",
+     "kind": "functional",
+     "nfr_category": "none",
+     "title": "Rider delivery dispatch workflow",
+     "description": "Riders must be able to go online, receive delivery offers, pick up orders, and mark them as delivered.",
+     "priority": "must"
+    },
+    {
+     "ref": "R5",
+     "kind": "functional",
+     "nfr_category": "none",
+     "title": "Admin dispute and onboarding tools",
+     "description": "Admins must be able to onboard new restaurants, handle customer refunds, and resolve delivery disputes.",
+     "priority": "should"
+    },
+    {
+     "ref": "R6",
+     "kind": "non_functional",
+     "nfr_category": "performance",
+     "title": "Dinner-time peak performance",
+     "description": "The system must handle high concurrent traffic during dinner-time peaks without degrading response times.",
+     "priority": "must"
+    },
+    {
+     "ref": "R7",
+     "kind": "non_functional",
+     "nfr_category": "security",
+     "title": "Secure payment processing",
+     "description": "All card and payment data must be handled in strict compliance with PCI-DSS standards.",
+     "priority": "must"
+    },
+    {
+     "ref": "R8",
+     "kind": "non_functional",
+     "nfr_category": "availability",
+     "title": "High availability for active orders",
+     "description": "The marketplace core ordering and tracking services must maintain 99.9% uptime.",
+     "priority": "must"
+    }
+   ],
+   "stories": [
+    {
+     "ref": "S1",
+     "requirement_refs": [
+      "R1"
+     ],
+     "title": "As a customer, I want to filter restaurants by cuisine and rating so that I can quickly find my preferred food.",
+     "acceptance_criteria": [
+      "Given the customer is on the restaurant list screen, when they select a specific cuisine filter, then only restaurants matching that cuisine are displayed.",
+      "Given the customer applies a rating filter, when the list updates, then all displayed restaurants meet or exceed the chosen minimum rating."
+     ]
+    },
+    {
+     "ref": "S2",
+     "requirement_refs": [
+      "R2"
+     ],
+     "title": "As a customer, I want to build a cart and pay securely online so that I can complete my food purchase.",
+     "acceptance_criteria": [
+      "Given items are added to the cart, when the customer proceeds to checkout, then the total price including taxes and delivery fee is displayed accurately.",
+      "Given the customer selects card or UPI payment, when payment is authorized, then an order confirmation and receipt are generated."
+     ]
+    },
+    {
+     "ref": "S3",
+     "requirement_refs": [
+      "R3"
+     ],
+     "title": "As a restaurant owner, I want to update my menu and toggle item availability so that customers only order available dishes.",
+     "acceptance_criteria": [
+      "Given the restaurant dashboard is open, when the owner toggles an item's availability to out-of-stock, then customers can no longer add that item to their cart.",
+      "Given a new menu item form is filled out, when submitted, then the item immediately appears on the restaurant public menu."
+     ]
+    },
+    {
+     "ref": "S4",
+     "requirement_refs": [
+      "R3"
+     ],
+     "title": "As a restaurant manager, I want to accept or reject incoming orders so that we can manage kitchen capacity.",
+     "acceptance_criteria": [
+      "Given a new order arrives with a notification sound, when the manager clicks accept and inputs prep time, then the status updates for the customer.",
+      "Given a kitchen overload situation, when the manager clicks reject with a reason, then the customer order is cancelled and refunded automatically."
+     ]
+    },
+    {
+     "ref": "S5",
+     "requirement_refs": [
+      "R4"
+     ],
+     "title": "As a rider, I want to go online and receive delivery offers so that I can earn money fulfilling orders.",
+     "acceptance_criteria": [
+      "Given the rider toggles their status to online, when a nearby order is ready for pickup, then a delivery offer alert with pickup and dropoff details is sent to the rider.",
+      "Given a delivery offer is received, when the rider accepts it within the time window, then the order is locked to their profile."
+     ]
+    },
+    {
+     "ref": "S6",
+     "requirement_refs": [
+      "R4"
+     ],
+     "title": "As a rider, I want to mark orders as picked up and delivered so that the delivery lifecycle is accurately tracked.",
+     "acceptance_criteria": [
+      "Given the rider arrives at the restaurant, when they scan or tap pickup, then the order status changes to out-for-delivery.",
+      "Given the rider reaches the customer location, when they tap mark delivered, then the delivery is closed and payment settlement triggers."
+     ]
+    },
+    {
+     "ref": "S7",
+     "requirement_refs": [
+      "R5"
+     ],
+     "title": "As an admin, I want to onboard new restaurants and handle customer refunds so that marketplace quality is maintained.",
+     "acceptance_criteria": [
+      "Given pending restaurant applications, when the admin verifies documents and approves, then the restaurant account becomes active.",
+      "Given a customer dispute ticket, when the admin investigates and issues a refund, then the payment gateway initiates the refund transaction."
+     ]
+    },
+    {
+     "ref": "S8",
+     "requirement_refs": [
+      "R6"
+     ],
+     "title": "As a system architect, I want to optimize database queries and caching for dinner peaks so that the app remains responsive.",
+     "acceptance_criteria": [
+      "Given a simulated dinner peak load of ten thousand concurrent requests, when the load test runs, then API response times remain under two hundred milliseconds.",
+      "Given frequent menu reads, when queried, then results are served via an in-memory cache layer to reduce database load."
+     ]
+    },
+    {
+     "ref": "S9",
+     "requirement_refs": [
+      "R7"
+     ],
+     "title": "As a security engineer, I want to tokenize card payments so that raw card data never touches our application servers.",
+     "acceptance_criteria": [
+      "Given a customer enters card details during checkout, when submitted, then the details are tokenized directly via the payment gateway SDK.",
+      "Given system logs are generated during checkout, when audited, then no raw card numbers or CVV values are present in plain text."
+     ]
+    },
+    {
+     "ref": "S10",
+     "requirement_refs": [
+      "R8"
+     ],
+     "title": "As a platform operator, I want automated failover for core services so that active deliveries are never disrupted by server outages.",
+     "acceptance_criteria": [
+      "Given the primary database cluster experiences an unexpected failure, when automated failover triggers, then standby replica is promoted within thirty seconds with zero data loss for active orders.",
+      "Given health check probes fail on a microservice node, when detected by the load balancer, then traffic is automatically routed to healthy instances."
+     ]
+    }
+   ],
+   "risks": [
+    {
+     "ref": "K1",
+     "title": "Dinner peak database bottleneck",
+     "description": "Sudden surge in traffic during dinner hours may overwhelm the primary database and crash checkout.",
+     "likelihood": "high",
+     "impact": "high",
+     "mitigation": "Implement Redis caching for restaurant menus and read replicas for browsing traffic, scaling database connection pools dynamically.",
+     "requirement_refs": [
+      "R6",
+      "R8"
+     ]
+    },
+    {
+     "ref": "K2",
+     "title": "Payment gateway downtime or breach",
+     "description": "Integration failure with card or UPI processors could halt revenue, or a compliance breach could incur heavy fines.",
+     "likelihood": "medium",
+     "impact": "high",
+     "mitigation": "Integrate a secondary fallback payment gateway and use client-side tokenization to adhere to PCI-DSS standards.",
+     "requirement_refs": [
+      "R2",
+      "R7"
+     ]
+    },
+    {
+     "ref": "K3",
+     "title": "Rider GPS tracking sync latency",
+     "description": "Poor cellular connectivity for riders may cause inaccurate live map updates and customer disputes.",
+     "likelihood": "medium",
+     "impact": "medium",
+     "mitigation": "Buffer location updates locally on the rider app and batch sync them over WebSockets with intelligent interpolation on the frontend.",
+     "requirement_refs": [
+      "R4",
+      "R8"
+     ]
+    }
+   ]
+  },
+  "design": {
+   "modules": [
+    {
+     "ref": "M1",
+     "name": "Restaurant Service",
+     "responsibility": "Manages restaurant profiles, cuisines, ratings, menus, and operating hours.",
+     "story_refs": [
+      "S1",
+      "S3",
+      "S7"
+     ],
+     "depends_on": []
+    },
+    {
+     "ref": "M2",
+     "name": "Order and Cart Service",
+     "responsibility": "Handles customer carts, order placement, and restaurant acceptance workflows.",
+     "story_refs": [
+      "S2",
+      "S4",
+      "S8"
+     ],
+     "depends_on": [
+      "M1"
+     ]
+    },
+    {
+     "ref": "M3",
+     "name": "Payment Service",
+     "responsibility": "Integrates with secure tokenized payment gateways and processes refunds.",
+     "story_refs": [
+      "S2",
+      "S7",
+      "S9"
+     ],
+     "depends_on": []
+    },
+    {
+     "ref": "M4",
+     "name": "Delivery Dispatch Service",
+     "responsibility": "Manages rider online status, dispatch offers, pickup, and live delivery tracking.",
+     "story_refs": [
+      "S5",
+      "S6",
+      "S10"
+     ],
+     "depends_on": [
+      "M2"
+     ]
+    }
+   ],
+   "entities": [
+    {
+     "ref": "E1",
+     "name": "Restaurant",
+     "description": "Represents a restaurant partner with profile, cuisine, and operational status.",
+     "fields": [
+      {
+       "name": "id",
+       "type": "string",
+       "primary_key": true,
+       "nullable": false
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "primary_key": false,
+       "nullable": false
+      },
+      {
+       "name": "cuisine",
+       "type": "string",
+       "primary_key": false,
+       "nullable": false
+      },
+      {
+       "name": "rating",
+       "type": "float",
+       "primary_key": false,
+       "nullable": false
+      },
+      {
+       "name": "is_active",
+       "type": "boolean",
+       "primary_key": false,
+       "nullable": false
+      }
+     ],
+     "relations": [
+      {
+       "target_ref": "E2",
+       "kind": "one_to_many"
+      },
+      {
+       "target_ref": "E3",
+       "kind": "one_to_many"
+      }
+     ]
+    },
+    {
+     "ref": "E2",
+     "name": "MenuItem",
+     "description": "Dishes and items offered by restaurants with availability flags.",
+     "fields": [
+      {
+       "name": "id",
+       "type": "string",
+       "primary_key": true,
+       "nullable": false
+      },
+      {
+       "name": "restaurant_id",
+       "type": "string",
+       "primary_key": false,
+       "nullable": false
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "primary_key": false,
+       "nullable": false
+      },
+      {
+       "name": "price",
+       "type": "float",
+       "primary_key": false,
+       "nullable": false
+      },
+      {
+       "name": "is_available",
+       "type": "boolean",
+       "primary_key": false,
+       "nullable": false
+      }
+     ],
+     "relations": [
+      {
+       "target_ref": "E1",
+       "kind": "many_to_one"
+      }
+     ]
+    },
+    {
+     "ref": "E3",
+     "name": "Order",
+     "description": "Customer food orders with status and total amount.",
+     "fields": [
+      {
+       "name": "id",
+       "type": "string",
+       "primary_key": true,
+       "nullable": false
+      },
+      {
+       "name": "customer_id",
+       "type": "string",
+       "primary_key": false,
+       "nullable": false
+      },
+      {
+       "name": "restaurant_id",
+       "type": "string",
+       "primary_key": false,
+       "nullable": false
+      },
+      {
+       "name": "status",
+       "type": "string",
+       "primary_key": false,
+       "nullable": false
+      },
+      {
+       "name": "total_amount",
+       "type": "float",
+       "primary_key": false,
+       "nullable": false
+      }
+     ],
+     "relations": [
+      {
+       "target_ref": "E1",
+       "kind": "many_to_one"
+      },
+      {
+       "target_ref": "E4",
+       "kind": "one_to_one"
+      },
+      {
+       "target_ref": "E5",
+       "kind": "one_to_one"
+      }
+     ]
+    },
+    {
+     "ref": "E4",
+     "name": "Payment",
+     "description": "Tokenized payment transactions associated with orders.",
+     "fields": [
+      {
+       "name": "id",
+       "type": "string",
+       "primary_key": true,
+       "nullable": false
+      },
+      {
+       "name": "order_id",
+       "type": "string",
+       "primary_key": false,
+       "nullable": false
+      },
+      {
+       "name": "gateway_token",
+       "type": "string",
+       "primary_key": false,
+       "nullable": false
+      },
+      {
+       "name": "amount",
+       "type": "float",
+       "primary_key": false,
+       "nullable": false
+      },
+      {
+       "name": "status",
+       "type": "string",
+       "primary_key": false,
+       "nullable": false
+      }
+     ],
+     "relations": [
+      {
+       "target_ref": "E3",
+       "kind": "one_to_one"
+      }
+     ]
+    },
+    {
+     "ref": "E5",
+     "name": "Delivery",
+     "description": "Rider delivery assignments and live GPS location tracking.",
+     "fields": [
+      {
+       "name": "id",
+       "type": "string",
+       "primary_key": true,
+       "nullable": false
+      },
+      {
+       "name": "order_id",
+       "type": "string",
+       "primary_key": false,
+       "nullable": false
+      },
+      {
+       "name": "rider_id",
+       "type": "string",
+       "primary_key": false,
+       "nullable": true
+      },
+      {
+       "name": "status",
+       "type": "string",
+       "primary_key": false,
+       "nullable": false
+      },
+      {
+       "name": "current_location",
+       "type": "string",
+       "primary_key": false,
+       "nullable": true
+      }
+     ],
+     "relations": [
+      {
+       "target_ref": "E3",
+       "kind": "one_to_one"
+      }
+     ]
+    }
+   ],
+   "apis": [
+    {
+     "ref": "A1",
+     "method": "GET",
+     "path": "/restaurants",
+     "summary": "List and filter restaurants by cuisine and rating",
+     "module_ref": "M1",
+     "entity_refs": [
+      "E1"
+     ]
+    },
+    {
+     "ref": "A2",
+     "method": "POST",
+     "path": "/restaurants",
+     "summary": "Onboard a new restaurant profile",
+     "module_ref": "M1",
+     "entity_refs": [
+      "E1"
+     ]
+    },
+    {
+     "ref": "A3",
+     "method": "PUT",
+     "path": "/restaurants/{id}",
+     "summary": "Update restaurant profile details",
+     "module_ref": "M1",
+     "entity_refs": [
+      "E1"
+     ]
+    },
+    {
+     "ref": "A4",
+     "method": "DELETE",
+     "path": "/restaurants/{id}",
+     "summary": "Deactivate a restaurant profile",
+     "module_ref": "M1",
+     "entity_refs": [
+      "E1"
+     ]
+    },
+    {
+     "ref": "A5",
+     "method": "GET",
+     "path": "/restaurants/{id}/menu-items",
+     "summary": "Get menu items for a specific restaurant",
+     "module_ref": "M1",
+     "entity_refs": [
+      "E1",
+      "E2"
+     ]
+    },
+    {
+     "ref": "A6",
+     "method": "POST",
+     "path": "/restaurants/{id}/menu-items",
+     "summary": "Create a new menu item",
+     "module_ref": "M1",
+     "entity_refs": [
+      "E2"
+     ]
+    },
+    {
+     "ref": "A7",
+     "method": "PATCH",
+     "path": "/menu-items/{id}",
+     "summary": "Toggle menu item availability",
+     "module_ref": "M1",
+     "entity_refs": [
+      "E2"
+     ]
+    },
+    {
+     "ref": "A8",
+     "method": "DELETE",
+     "path": "/menu-items/{id}",
+     "summary": "Delete a menu item",
+     "module_ref": "M1",
+     "entity_refs": [
+      "E2"
+     ]
+    },
+    {
+     "ref": "A9",
+     "method": "POST",
+     "path": "/orders",
+     "summary": "Place a new customer order from cart",
+     "module_ref": "M2",
+     "entity_refs": [
+      "E3"
+     ]
+    },
+    {
+     "ref": "A10",
+     "method": "GET",
+     "path": "/orders/{id}",
+     "summary": "Get order details and current status",
+     "module_ref": "M2",
+     "entity_refs": [
+      "E3"
+     ]
+    },
+    {
+     "ref": "A11",
+     "method": "PATCH",
+     "path": "/orders/{id}/status",
+     "summary": "Accept or reject incoming order by restaurant",
+     "module_ref": "M2",
+     "entity_refs": [
+      "E3"
+     ]
+    },
+    {
+     "ref": "A12",
+     "method": "DELETE",
+     "path": "/orders/{id}",
+     "summary": "Cancel an active order",
+     "module_ref": "M2",
+     "entity_refs": [
+      "E3"
+     ]
+    },
+    {
+     "ref": "A13",
+     "method": "POST",
+     "path": "/payments",
+     "summary": "Process tokenized card or UPI payment",
+     "module_ref": "M3",
+     "entity_refs": [
+      "E4"
+     ]
+    },
+    {
+     "ref": "A14",
+     "method": "GET",
+     "path": "/payments/{id}",
+     "summary": "Retrieve payment transaction details",
+     "module_ref": "M3",
+     "entity_refs": [
+      "E4"
+     ]
+    },
+    {
+     "ref": "A15",
+     "method": "POST",
+     "path": "/payments/{id}/refund",
+     "summary": "Process a customer refund for disputed orders",
+     "module_ref": "M3",
+     "entity_refs": [
+      "E4"
+     ]
+    },
+    {
+     "ref": "A16",
+     "method": "POST",
+     "path": "/deliveries",
+     "summary": "Create and dispatch delivery assignment for rider",
+     "module_ref": "M4",
+     "entity_refs": [
+      "E5"
+     ]
+    },
+    {
+     "ref": "A17",
+     "method": "PATCH",
+     "path": "/deliveries/{id}",
+     "summary": "Mark order as picked up or delivered by rider",
+     "module_ref": "M4",
+     "entity_refs": [
+      "E5"
+     ]
+    },
+    {
+     "ref": "A18",
+     "method": "GET",
+     "path": "/deliveries/{id}/tracking",
+     "summary": "Get live rider location for active delivery map",
+     "module_ref": "M4",
+     "entity_refs": [
+      "E5"
+     ]
+    }
+   ]
+  },
+  "tests": {
+   "tests": [
+    {
+     "ref": "T1",
+     "title": "Filter restaurants by cuisine and rating",
+     "kind": "integration",
+     "story_refs": [
+      "S1"
+     ],
+     "api_refs": [
+      "A1"
+     ],
+     "steps": [
+      "Send a GET request to /restaurants with cuisine filter Italian.",
+      "Verify only Italian restaurants are returned in the JSON array.",
+      "Send a GET request to /restaurants with minimum rating 4.5.",
+      "Verify all returned restaurants have rating >= 4.5."
+     ]
+    },
+    {
+     "ref": "T2",
+     "title": "Build cart and complete online checkout",
+     "kind": "e2e",
+     "story_refs": [
+      "S2"
+     ],
+     "api_refs": [
+      "A9",
+      "A13"
+     ],
+     "steps": [
+      "Submit a POST request to /orders with selected menu items and quantities.",
+      "Verify order response contains correct taxes and delivery fees.",
+      "Submit a POST request to /payments with tokenized payment details.",
+      "Verify payment success and receipt generation."
+     ]
+    },
+    {
+     "ref": "T3",
+     "title": "Manage menu item creation and availability toggle",
+     "kind": "integration",
+     "story_refs": [
+      "S3"
+     ],
+     "api_refs": [
+      "A6",
+      "A7"
+     ],
+     "steps": [
+      "Send a POST request to /restaurants/{id}/menu-items to create a new dish.",
+      "Verify the new dish appears in GET /restaurants/{id}/menu-items.",
+      "Send a PATCH request to /menu-items/{id} to set availability to false.",
+      "Verify item is marked out-of-stock."
+     ]
+    },
+    {
+     "ref": "T4",
+     "title": "Restaurant manager order acceptance workflow",
+     "kind": "e2e",
+     "story_refs": [
+      "S4"
+     ],
+     "api_refs": [
+      "A10",
+      "A11"
+     ],
+     "steps": [
+      "Send a PATCH request to /orders/{id}/status with status accepted and prep time.",
+      "Send a GET request to /orders/{id} to verify status update.",
+      "Verify customer receives notification update."
+     ]
+    },
+    {
+     "ref": "T5",
+     "title": "Rider goes online and accepts delivery offer",
+     "kind": "integration",
+     "story_refs": [
+      "S5"
+     ],
+     "api_refs": [
+      "A16"
+     ],
+     "steps": [
+      "Trigger rider online status update.",
+      "Send a POST request to /deliveries to create and dispatch a delivery assignment.",
+      "Verify delivery offer is successfully sent to the assigned rider."
+     ]
+    },
+    {
+     "ref": "T6",
+     "title": "Rider lifecycle pickup and delivery completion",
+     "kind": "e2e",
+     "story_refs": [
+      "S6"
+     ],
+     "api_refs": [
+      "A17",
+      "A18"
+     ],
+     "steps": [
+      "Send a PATCH request to /deliveries/{id} to mark the order as picked up.",
+      "Send a GET request to /deliveries/{id}/tracking to verify live location updates.",
+      "Send a PATCH request to /deliveries/{id} to mark the order as delivered."
+     ]
+    },
+    {
+     "ref": "T7",
+     "title": "Admin restaurant onboarding and dispute refund",
+     "kind": "integration",
+     "story_refs": [
+      "S7"
+     ],
+     "api_refs": [
+      "A2",
+      "A15"
+     ],
+     "steps": [
+      "Send a POST request to /restaurants with valid verification documents.",
+      "Verify restaurant profile status is set to active.",
+      "Send a POST request to /payments/{id}/refund for a disputed order.",
+      "Verify refund transaction is initiated."
+     ]
+    },
+    {
+     "ref": "T8",
+     "title": "Dinner peak load performance test",
+     "kind": "performance",
+     "story_refs": [
+      "S8"
+     ],
+     "api_refs": [
+      "A1",
+      "A5"
+     ],
+     "steps": [
+      "Simulate 10000 concurrent requests querying restaurant lists and menus.",
+      "Measure API response times under load.",
+      "Verify all API response times remain under 200 milliseconds."
+     ]
+    },
+    {
+     "ref": "T9",
+     "title": "Tokenized payment card security audit",
+     "kind": "security",
+     "story_refs": [
+      "S9"
+     ],
+     "api_refs": [
+      "A13"
+     ],
+     "steps": [
+      "Submit payment payload containing raw card numbers to /payments.",
+      "Verify client-side tokenization produces opaque tokens before server receipt.",
+      "Inspect application server logs to ensure zero raw card numbers or CVVs are stored in plain text."
+     ]
+    },
+    {
+     "ref": "T10",
+     "title": "Automated database failover during active delivery",
+     "kind": "integration",
+     "story_refs": [
+      "S10"
+     ],
+     "api_refs": [
+      "A10",
+      "A17"
+     ],
+     "steps": [
+      "Simulate primary database failure during an active delivery update.",
+      "Verify automated database failover promotes standby replica within thirty seconds.",
+      "Verify active order status and delivery updates complete with zero data loss."
+     ]
+    }
+   ]
+  }
+ }
+}

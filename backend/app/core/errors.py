@@ -79,7 +79,13 @@ _HTTP_CODES = {
 def register_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(AppError)
     async def _app_error(_: Request, exc: AppError) -> JSONResponse:
-        return JSONResponse(error_body(exc.code, exc.message, exc.details), exc.status_code)
+        headers = {}
+        retry_after = exc.details.get("retry_after_seconds")
+        if retry_after is not None:
+            headers["Retry-After"] = str(retry_after)
+        return JSONResponse(
+            error_body(exc.code, exc.message, exc.details), exc.status_code, headers=headers
+        )
 
     @app.exception_handler(RequestValidationError)
     async def _validation(_: Request, exc: RequestValidationError) -> JSONResponse:

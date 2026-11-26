@@ -4,7 +4,7 @@ from app.api.deps import DB, CurrentUser
 from app.core.config import get_settings
 from app.core.errors import Unauthorized
 from app.schemas.auth import LoginIn, RegisterIn, TokenOut, UserOut
-from app.services import auth_service
+from app.services import auth_service, ratelimit
 from app.services.auth_service import TokenPair
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -43,8 +43,13 @@ def login(body: LoginIn, db: DB, response: Response) -> TokenOut:
 
 
 @router.post("/demo", response_model=TokenOut)
-def demo_login(db: DB, response: Response) -> TokenOut:
+def demo_login(request: Request, db: DB, response: Response) -> TokenOut:
     """One-click recruiter login: editor on the shared sandbox project."""
+    ip = request.client.host if request.client else "unknown"
+    ratelimit.check(
+        [ratelimit.Limit("ip", ip, get_settings().demo_login_limit_per_ip_hour, 3600)],
+        action="demo_login",
+    )
     user = auth_service.ensure_demo_user(db)
     return _respond(response, auth_service.issue_tokens(db, user))
 

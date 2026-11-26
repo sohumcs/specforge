@@ -17,7 +17,13 @@ from argon2.exceptions import InvalidHashError, VerificationError
 from app.core.config import get_settings
 from app.core.errors import Unauthorized
 
-_hasher = PasswordHasher()  # argon2id with the library's recommended parameters
+# argon2id with the library's recommended parameters. Tests use deliberately
+# cheap parameters (the RBAC matrix creates hundreds of users); never prod.
+_hasher = (
+    PasswordHasher(time_cost=1, memory_cost=1024, parallelism=1)
+    if get_settings().environment == "test"
+    else PasswordHasher()
+)
 
 
 def hash_password(password: str) -> str:

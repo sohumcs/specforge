@@ -7,8 +7,9 @@ Resume a session by reading this file + `../Web/new-portfolio/SPECFORGE_BUILD_PR
 |---|---|
 | 1. Plan | ✅ approved 2026-11-26 |
 | 2. Backend core | ✅ done 2026-11-26: 122 tests green, 94 % coverage, ruff/mypy-strict/bandit clean |
-| 3. AI pipeline | ⏳ next |
-| 4–10 | not started |
+| 3. AI pipeline | ✅ done 2026-11-26: 190 tests green, 95 % coverage, live E2E proven |
+| 4. Verification engine | ⏳ next |
+| 5–10 | not started |
 
 ## Decisions made by Sohum
 - Repo `sohumcs/specforge` is **public**.
@@ -32,13 +33,37 @@ docker run -d --name specforge-redis -p 6380:6379 redis:7-alpine
 cd backend && python -m venv .venv && .venv/Scripts/pip install -e ".[dev]" && .venv/Scripts/python -m pytest --cov=app
 ```
 
+## Phase 3 — what exists
+- `app/llm/schemas.py`: 3 stage schemas (requirements / design / tests) + `cross_reference_errors` + `to_graph`.
+- `app/llm/templates/*.v1.md`: versioned prompts. `PROMPT_VERSION` is part of the cache key.
+- `app/llm/providers/`: `gemini.py`, `groq.py` (httpx REST, strict JSON schema), `demo.py` (4 curated samples in `app/llm/demo_data/`, else spaCy-driven templates).
+- `app/llm/chain.py`: per-stage fallback, repair retries (max 2), Retry-After waits, Redis circuit breaker (`breaker.py`). Order: exact cache, then gemini, then groq, then stale cache, then demo.
+- `app/nlp/brief.py`: spaCy `en_core_web_sm` 3.8.0 → actors, entities, (verb, object, actor) actions, terms.
+- `app/services/generation.py`: the pipeline + Postgres generation cache. `jobs.py`: idempotent submission, progress → DB + Redis pub/sub, DLQ. `ratelimit.py`: per user/IP/global.
+- `app/worker/`: Celery app (acks_late, reject_on_worker_lost, threads pool) + `generate_blueprint` task (retry with backoff → dead-letter).
+- API: `POST /blueprints/{id}/generate` (Idempotency-Key, 202/200/429/503), `GET /jobs/{id}`, `GET /blueprints/{id}/jobs`, `GET /jobs/{id}/events` (SSE). `/status` shows the LLM chain and breaker state.
+- Migration `0002`: `generation_cache.brief_hash`, `jobs(blueprint_id,status)` index.
+- Proven live: uvicorn + Celery worker + Gemini, demo login → generate → SSE showed every step → 55 nodes / 97 edges stored. Opt-in live tests: `SPECFORGE_LIVE_TESTS=1 pytest -m live` (both providers pass).
+
+## Run locally (Windows, Git Bash)
+```
+cd backend
+.venv/Scripts/alembic upgrade head
+.venv/Scripts/uvicorn app.main:app --port 8000
+.venv/Scripts/celery -A app.worker.celery_app worker -P threads -c 2 -l INFO
+```
+
+## Open items / notes
+- ⚠️ The Gemini key in `backend/.env` is the one that was pasted in chat. **Rotate it before Phase 8 (deploy).**
+- `backend/.env` has `JWT_SECRET=change-me`. Fine for dev, but production gets a generated secret via k8s Secret.
+
 ## Accounts Sohum will need to create (never paste keys in chat)
 | When | What |
 |---|---|
-| Phase 3 (next) | Google AI Studio → Gemini API key; GroqCloud → API key. Put both in `backend/.env` only. |
+| Phase 3 | ✅ Gemini + Groq keys added to `backend/.env` |
 | Phase 7 | Nothing (GitHub already authenticated) |
 | Phase 8 | Oracle Cloud Free Tier account + API signing key; DuckDNS (sign in with GitHub) + token; UptimeRobot free account |
 | Phase 9 | Confirm the AWS student account type; sign in and generate credentials when we get there |
 
-## Next: Phase 3
-LLM provider layer (Gemini, Groq, Cached, Demo, fallback chain, circuit breaker), versioned prompt templates, Pydantic structured output + repair retries, spaCy brief parsing, Celery app + `generate_blueprint` task with progress (Redis pub/sub → SSE), idempotent job submission, per-user/IP rate limiting.
+## Next: Phase 4
+Verification engine: rule layer (TR/CP/CV rules in ARCHITECTURE §2.2), sentence-transformer embeddings into pgvector (duplicates), NLI cross-encoder (contradictions), Quality Score + issues, "fix with AI" job, regenerate-subgraph job. The pipeline steps `rule_check → ml_check → scoring` get inserted before `done`.

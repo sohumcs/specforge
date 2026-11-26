@@ -1,0 +1,920 @@
+{
+ "slug": "fintech-wallet",
+ "title": "Fintech digital wallet",
+ "brief": "A digital wallet app. Users sign up with phone number and complete KYC with ID documents, add money from their bank account, send money to contacts, pay merchants by scanning a QR code and view their transaction history and monthly statements. Merchants receive payments and request settlements to their bank. A compliance team reviews flagged transactions for fraud and enforces daily limits. Every transaction must be exactly-once, auditable and reconciled daily.",
+ "keywords": [
+  "wallet",
+  "payment",
+  "payments",
+  "transfer",
+  "transfers",
+  "kyc",
+  "bank",
+  "money",
+  "balance",
+  "merchant",
+  "fintech",
+  "upi"
+ ],
+ "generated_by": "gemini",
+ "stage_providers": {
+  "requirements": "gemini",
+  "design": "gemini",
+  "tests": "gemini"
+ },
+ "generated_at": "2026-11-26",
+ "draft": {
+  "requirements": {
+   "requirements": [
+    {
+     "ref": "R1",
+     "kind": "functional",
+     "nfr_category": "none",
+     "title": "Phone Registration and KYC",
+     "description": "Users must register with a phone number and complete KYC verification using ID documents.",
+     "priority": "must"
+    },
+    {
+     "ref": "R2",
+     "kind": "functional",
+     "nfr_category": "none",
+     "title": "Bank Account Top-up",
+     "description": "Users can add funds to their wallet from a linked bank account.",
+     "priority": "must"
+    },
+    {
+     "ref": "R3",
+     "kind": "functional",
+     "nfr_category": "none",
+     "title": "Peer-to-Peer and Merchant Payments",
+     "description": "Users can send money to contacts and pay merchants via QR code scanning.",
+     "priority": "must"
+    },
+    {
+     "ref": "R4",
+     "kind": "functional",
+     "nfr_category": "none",
+     "title": "Transaction History and Statements",
+     "description": "Users can view transaction history and monthly statements.",
+     "priority": "should"
+    },
+    {
+     "ref": "R5",
+     "kind": "functional",
+     "nfr_category": "none",
+     "title": "Merchant Settlement",
+     "description": "Merchants can receive payments and request settlements to their bank accounts.",
+     "priority": "must"
+    },
+    {
+     "ref": "R6",
+     "kind": "functional",
+     "nfr_category": "none",
+     "title": "Compliance and Fraud Monitoring",
+     "description": "Compliance team can review flagged transactions and enforce daily transfer limits.",
+     "priority": "must"
+    },
+    {
+     "ref": "R7",
+     "kind": "non_functional",
+     "nfr_category": "performance",
+     "title": "Low Latency QR Payments",
+     "description": "QR code merchant payments must process within two seconds under peak load.",
+     "priority": "must"
+    },
+    {
+     "ref": "R8",
+     "kind": "non_functional",
+     "nfr_category": "security",
+     "title": "Exactly-Once and Auditable Transactions",
+     "description": "Every transaction must guarantee exactly-once execution and be fully auditable.",
+     "priority": "must"
+    },
+    {
+     "ref": "R9",
+     "kind": "non_functional",
+     "nfr_category": "availability",
+     "title": "High Availability for Ledger",
+     "description": "The wallet ledger and payment services must maintain ninety-nine point nine percent availability.",
+     "priority": "should"
+    }
+   ],
+   "stories": [
+    {
+     "ref": "S1",
+     "requirement_refs": [
+      "R1"
+     ],
+     "title": "As a user, I want to register with my phone and submit ID documents so that I can open a wallet.",
+     "acceptance_criteria": [
+      "Given the registration screen, when the user inputs a valid phone number, then an OTP is sent via SMS.",
+      "Given the OTP is verified, when the user uploads ID documents, then KYC status changes to pending."
+     ]
+    },
+    {
+     "ref": "S2",
+     "requirement_refs": [
+      "R2"
+     ],
+     "title": "As a user, I want to link my bank account and add money so that I can fund my digital wallet.",
+     "acceptance_criteria": [
+      "Given the wallet dashboard, when the user adds a bank account, then verification micro-deposits are initiated.",
+      "Given a linked bank account, when the user requests a top-up, then funds are credited to the wallet."
+     ]
+    },
+    {
+     "ref": "S3",
+     "requirement_refs": [
+      "R3"
+     ],
+     "title": "As a user, I want to send money to phone contacts so that I can split bills easily.",
+     "acceptance_criteria": [
+      "Given the contacts list, when the user selects a contact and enters an amount, then the transfer screen opens.",
+      "Given the confirmation step, when the user authorizes payment, then funds transfer instantly."
+     ]
+    },
+    {
+     "ref": "S4",
+     "requirement_refs": [
+      "R3"
+     ],
+     "title": "As a user, I want to scan merchant QR codes so that I can pay for goods seamlessly.",
+     "acceptance_criteria": [
+      "Given the in-app camera, when a valid merchant QR code is scanned, then the payment prompt appears.",
+      "Given the payment prompt, when the user confirms, then the merchant receives the funds immediately."
+     ]
+    },
+    {
+     "ref": "S5",
+     "requirement_refs": [
+      "R4"
+     ],
+     "title": "As a user, I want to view my transaction history and monthly statements so that I can track my spending.",
+     "acceptance_criteria": [
+      "Given the activity screen, when the user opens transaction history, then a paginated list of past transfers appears.",
+      "Given the statements screen, when the user selects a month, then a downloadable PDF statement is generated."
+     ]
+    },
+    {
+     "ref": "S6",
+     "requirement_refs": [
+      "R5"
+     ],
+     "title": "As a merchant, I want to request settlements so that funds go to my bank.",
+     "acceptance_criteria": [
+      "Given the merchant portal, when the user clicks request settlement, then pending balances are calculated.",
+      "Given a valid balance, when the settlement is submitted, then a bank transfer job is queued."
+     ]
+    },
+    {
+     "ref": "S7",
+     "requirement_refs": [
+      "R6"
+     ],
+     "title": "As a compliance officer, I want to review flagged transactions and limits so that fraud is prevented.",
+     "acceptance_criteria": [
+      "Given the compliance dashboard, when suspicious transactions appear, the officer can freeze the transfer.",
+      "Given user profiles, when daily limits are exceeded, then subsequent transfers are automatically blocked."
+     ]
+    },
+    {
+     "ref": "S8",
+     "requirement_refs": [
+      "R7"
+     ],
+     "title": "As a user, I want fast QR payments so that I do not wait at checkout counters.",
+     "acceptance_criteria": [
+      "Given network connectivity, when a QR payment is initiated, then the response returns in under two seconds.",
+      "Given high concurrency, when multiple users pay simultaneously, then latency remains within acceptable limits."
+     ]
+    },
+    {
+     "ref": "S9",
+     "requirement_refs": [
+      "R8"
+     ],
+     "title": "As an auditor, I want exactly-once transaction processing so that ledger discrepancies never occur.",
+     "acceptance_criteria": [
+      "Given a network retry during payment, when the request is sent twice, then the ledger debits only once.",
+      "Given any financial operation, when completed, then an immutable audit log record is written."
+     ]
+    },
+    {
+     "ref": "S10",
+     "requirement_refs": [
+      "R9"
+     ],
+     "title": "As a platform operator, I want high availability so that users can pay anytime without downtime.",
+     "acceptance_criteria": [
+      "Given system monitoring, when a primary database fails, then automatic failover occurs within thirty seconds.",
+      "Given scheduled maintenance, when updates occur, then zero-downtime deployment strategies are utilized."
+     ]
+    }
+   ],
+   "risks": [
+    {
+     "ref": "K1",
+     "title": "Double Spending via Network Retries",
+     "description": "Unsafe idempotency handling could allow users to double spend funds during network partitions.",
+     "likelihood": "medium",
+     "impact": "high",
+     "mitigation": "Enforce strict idempotency keys and database constraints on all ledger movement transactions.",
+     "requirement_refs": [
+      "R8"
+     ]
+    },
+    {
+     "ref": "K2",
+     "title": "KYC Document Fraud",
+     "description": "Fraudsters might use forged ID documents during sign-up to bypass AML controls.",
+     "likelihood": "high",
+     "impact": "high",
+     "mitigation": "Integrate third-party biometric verification and automated OCR checks for all ID uploads.",
+     "requirement_refs": [
+      "R1",
+      "R6"
+     ]
+    },
+    {
+     "ref": "K3",
+     "title": "Payment Gateway Latency Spikes",
+     "description": "External bank APIs could slow down, causing QR payments to exceed the performance threshold.",
+     "likelihood": "medium",
+     "impact": "medium",
+     "mitigation": "Implement asynchronous settlement queues and cache merchant metadata to minimize blocking calls.",
+     "requirement_refs": [
+      "R7",
+      "R9"
+     ]
+    }
+   ]
+  },
+  "design": {
+   "modules": [
+    {
+     "ref": "M1",
+     "name": "Auth and KYC Module",
+     "responsibility": "Handles phone registration, user profiles, and identity document verification.",
+     "story_refs": [
+      "S1"
+     ],
+     "depends_on": []
+    },
+    {
+     "ref": "M2",
+     "name": "Ledger and Banking Module",
+     "responsibility": "Manages bank account linking, fund top-ups, balances, and exactly-once ledger entries.",
+     "story_refs": [
+      "S2",
+      "S9",
+      "S10"
+     ],
+     "depends_on": [
+      "M1"
+     ]
+    },
+    {
+     "ref": "M3",
+     "name": "Payments and QR Module",
+     "responsibility": "Processes peer-to-peer transfers and low-latency merchant QR code payments.",
+     "story_refs": [
+      "S3",
+      "S4",
+      "S8"
+     ],
+     "depends_on": [
+      "M1",
+      "M2"
+     ]
+    },
+    {
+     "ref": "M4",
+     "name": "Reporting and Statement Module",
+     "responsibility": "Generates transaction histories and monthly statements for users.",
+     "story_refs": [
+      "S5"
+     ],
+     "depends_on": [
+      "M2"
+     ]
+    },
+    {
+     "ref": "M5",
+     "name": "Merchant Settlement Module",
+     "responsibility": "Handles merchant onboarding, incoming payment reception, and bank settlement requests.",
+     "story_refs": [
+      "S6"
+     ],
+     "depends_on": [
+      "M2",
+      "M3"
+     ]
+    },
+    {
+     "ref": "M6",
+     "name": "Compliance and Fraud Module",
+     "responsibility": "Monitors daily limits, flags suspicious transactions, and supports compliance reviews.",
+     "story_refs": [
+      "S7"
+     ],
+     "depends_on": [
+      "M2",
+      "M3"
+     ]
+    }
+   ],
+   "entities": [
+    {
+     "ref": "E1",
+     "name": "User",
+     "description": "Represents a registered wallet user including KYC status and phone number.",
+     "fields": [
+      {
+       "name": "id",
+       "type": "string",
+       "primary_key": true,
+       "nullable": false
+      },
+      {
+       "name": "phone_number",
+       "type": "string",
+       "primary_key": false,
+       "nullable": false
+      },
+      {
+       "name": "kyc_status",
+       "type": "string",
+       "primary_key": false,
+       "nullable": false
+      }
+     ],
+     "relations": [
+      {
+       "target_ref": "E2",
+       "kind": "one_to_many"
+      },
+      {
+       "target_ref": "E3",
+       "kind": "one_to_many"
+      }
+     ]
+    },
+    {
+     "ref": "E2",
+     "name": "BankAccount",
+     "description": "Linked external bank accounts used for top-ups and settlements.",
+     "fields": [
+      {
+       "name": "id",
+       "type": "string",
+       "primary_key": true,
+       "nullable": false
+      },
+      {
+       "name": "user_id",
+       "type": "string",
+       "primary_key": false,
+       "nullable": false
+      },
+      {
+       "name": "account_number",
+       "type": "string",
+       "primary_key": false,
+       "nullable": false
+      },
+      {
+       "name": "bank_name",
+       "type": "string",
+       "primary_key": false,
+       "nullable": false
+      }
+     ],
+     "relations": [
+      {
+       "target_ref": "E1",
+       "kind": "many_to_one"
+      }
+     ]
+    },
+    {
+     "ref": "E3",
+     "name": "Wallet",
+     "description": "Stores user balances and currency information.",
+     "fields": [
+      {
+       "name": "id",
+       "type": "string",
+       "primary_key": true,
+       "nullable": false
+      },
+      {
+       "name": "user_id",
+       "type": "string",
+       "primary_key": false,
+       "nullable": false
+      },
+      {
+       "name": "balance",
+       "type": "number",
+       "primary_key": false,
+       "nullable": false
+      },
+      {
+       "name": "currency",
+       "type": "string",
+       "primary_key": false,
+       "nullable": false
+      }
+     ],
+     "relations": [
+      {
+       "target_ref": "E1",
+       "kind": "many_to_one"
+      }
+     ]
+    },
+    {
+     "ref": "E4",
+     "name": "Merchant",
+     "description": "Represents a registered merchant entity accepting payments via QR codes.",
+     "fields": [
+      {
+       "name": "id",
+       "type": "string",
+       "primary_key": true,
+       "nullable": false
+      },
+      {
+       "name": "business_name",
+       "type": "string",
+       "primary_key": false,
+       "nullable": false
+      },
+      {
+       "name": "qr_code_data",
+       "type": "string",
+       "primary_key": false,
+       "nullable": false
+      }
+     ],
+     "relations": [
+      {
+       "target_ref": "E5",
+       "kind": "one_to_many"
+      }
+     ]
+    },
+    {
+     "ref": "E5",
+     "name": "Transaction",
+     "description": "Auditable record of every top-up, P2P transfer, or merchant payment.",
+     "fields": [
+      {
+       "name": "id",
+       "type": "string",
+       "primary_key": true,
+       "nullable": false
+      },
+      {
+       "name": "sender_id",
+       "type": "string",
+       "primary_key": false,
+       "nullable": false
+      },
+      {
+       "name": "receiver_id",
+       "type": "string",
+       "primary_key": false,
+       "nullable": true
+      },
+      {
+       "name": "amount",
+       "type": "number",
+       "primary_key": false,
+       "nullable": false
+      },
+      {
+       "name": "status",
+       "type": "string",
+       "primary_key": false,
+       "nullable": false
+      },
+      {
+       "name": "idempotency_key",
+       "type": "string",
+       "primary_key": false,
+       "nullable": false
+      }
+     ],
+     "relations": [
+      {
+       "target_ref": "E1",
+       "kind": "many_to_one"
+      },
+      {
+       "target_ref": "E4",
+       "kind": "many_to_one"
+      }
+     ]
+    },
+    {
+     "ref": "E6",
+     "name": "Settlement",
+     "description": "Records merchant payout requests to their linked bank accounts.",
+     "fields": [
+      {
+       "name": "id",
+       "type": "string",
+       "primary_key": true,
+       "nullable": false
+      },
+      {
+       "name": "merchant_id",
+       "type": "string",
+       "primary_key": false,
+       "nullable": false
+      },
+      {
+       "name": "amount",
+       "type": "number",
+       "primary_key": false,
+       "nullable": false
+      },
+      {
+       "name": "status",
+       "type": "string",
+       "primary_key": false,
+       "nullable": false
+      }
+     ],
+     "relations": [
+      {
+       "target_ref": "E4",
+       "kind": "many_to_one"
+      }
+     ]
+    },
+    {
+     "ref": "E7",
+     "name": "ComplianceFlag",
+     "description": "Tracks flagged transactions under review by the compliance team.",
+     "fields": [
+      {
+       "name": "id",
+       "type": "string",
+       "primary_key": true,
+       "nullable": false
+      },
+      {
+       "name": "transaction_id",
+       "type": "string",
+       "primary_key": false,
+       "nullable": false
+      },
+      {
+       "name": "reason",
+       "type": "string",
+       "primary_key": false,
+       "nullable": false
+      },
+      {
+       "name": "reviewed",
+       "type": "boolean",
+       "primary_key": false,
+       "nullable": false
+      }
+     ],
+     "relations": [
+      {
+       "target_ref": "E5",
+       "kind": "many_to_one"
+      }
+     ]
+    }
+   ],
+   "apis": [
+    {
+     "ref": "A1",
+     "method": "POST",
+     "path": "/users",
+     "summary": "Register a new user with phone number",
+     "module_ref": "M1",
+     "entity_refs": [
+      "E1"
+     ]
+    },
+    {
+     "ref": "A2",
+     "method": "GET",
+     "path": "/users/{id}",
+     "summary": "Get user profile and KYC details",
+     "module_ref": "M1",
+     "entity_refs": [
+      "E1"
+     ]
+    },
+    {
+     "ref": "A3",
+     "method": "PUT",
+     "path": "/users/{id}",
+     "summary": "Update user KYC status and details",
+     "module_ref": "M1",
+     "entity_refs": [
+      "E1"
+     ]
+    },
+    {
+     "ref": "A4",
+     "method": "DELETE",
+     "path": "/users/{id}",
+     "summary": "Deactivate user account",
+     "module_ref": "M1",
+     "entity_refs": [
+      "E1"
+     ]
+    },
+    {
+     "ref": "A5",
+     "method": "POST",
+     "path": "/bank-accounts",
+     "summary": "Link a bank account",
+     "module_ref": "M2",
+     "entity_refs": [
+      "E2"
+     ]
+    },
+    {
+     "ref": "A6",
+     "method": "GET",
+     "path": "/bank-accounts/{id}",
+     "summary": "Get linked bank account details",
+     "module_ref": "M2",
+     "entity_refs": [
+      "E2"
+     ]
+    },
+    {
+     "ref": "A7",
+     "method": "PATCH",
+     "path": "/bank-accounts/{id}",
+     "summary": "Update linked bank account",
+     "module_ref": "M2",
+     "entity_refs": [
+      "E2"
+     ]
+    },
+    {
+     "ref": "A8",
+     "method": "DELETE",
+     "path": "/bank-accounts/{id}",
+     "summary": "Unlink bank account",
+     "module_ref": "M2",
+     "entity_refs": [
+      "E2"
+     ]
+    },
+    {
+     "ref": "A9",
+     "method": "POST",
+     "path": "/wallets/top-up",
+     "summary": "Add money to wallet from linked bank account",
+     "module_ref": "M2",
+     "entity_refs": [
+      "E3",
+      "E5"
+     ]
+    },
+    {
+     "ref": "A10",
+     "method": "POST",
+     "path": "/transfers",
+     "summary": "Send money to contacts or pay merchant via QR",
+     "module_ref": "M3",
+     "entity_refs": [
+      "E5",
+      "E3"
+     ]
+    },
+    {
+     "ref": "A11",
+     "method": "GET",
+     "path": "/transactions",
+     "summary": "Get transaction history for user",
+     "module_ref": "M4",
+     "entity_refs": [
+      "E5"
+     ]
+    },
+    {
+     "ref": "A12",
+     "method": "GET",
+     "path": "/statements",
+     "summary": "Generate monthly account statements",
+     "module_ref": "M4",
+     "entity_refs": [
+      "E5",
+      "E3"
+     ]
+    },
+    {
+     "ref": "A13",
+     "method": "POST",
+     "path": "/settlements",
+     "summary": "Request merchant payout settlement",
+     "module_ref": "M5",
+     "entity_refs": [
+      "E6",
+      "E4"
+     ]
+    },
+    {
+     "ref": "A14",
+     "method": "GET",
+     "path": "/settlements/{id}",
+     "summary": "Get merchant settlement status",
+     "module_ref": "M5",
+     "entity_refs": [
+      "E6"
+     ]
+    },
+    {
+     "ref": "A15",
+     "method": "GET",
+     "path": "/compliance-flags",
+     "summary": "List flagged transactions for review",
+     "module_ref": "M6",
+     "entity_refs": [
+      "E7",
+      "E5"
+     ]
+    },
+    {
+     "ref": "A16",
+     "method": "PATCH",
+     "path": "/compliance-flags/{id}",
+     "summary": "Resolve or update a compliance review flag",
+     "module_ref": "M6",
+     "entity_refs": [
+      "E7"
+     ]
+    }
+   ]
+  },
+  "tests": {
+   "tests": [
+    {
+     "ref": "T1",
+     "title": "User registration and KYC submission",
+     "kind": "integration",
+     "story_refs": [
+      "S1"
+     ],
+     "api_refs": [
+      "A1",
+      "A2",
+      "A3"
+     ],
+     "steps": [
+      "Send POST /users with a valid phone number",
+      "Verify OTP verification succeeds",
+      "Update KYC status using PUT /users/{id}"
+     ]
+    },
+    {
+     "ref": "T2",
+     "title": "Bank account linking and wallet top-up",
+     "kind": "integration",
+     "story_refs": [
+      "S2"
+     ],
+     "api_refs": [
+      "A5",
+      "A9"
+     ],
+     "steps": [
+      "Link bank account via POST /bank-accounts",
+      "Initiate top-up via POST /wallets/top-up",
+      "Confirm wallet balance is updated"
+     ]
+    },
+    {
+     "ref": "T3",
+     "title": "Peer-to-peer money transfer",
+     "kind": "integration",
+     "story_refs": [
+      "S3"
+     ],
+     "api_refs": [
+      "A10",
+      "A11"
+     ],
+     "steps": [
+      "Initiate transfer to contact via POST /transfers",
+      "Verify transfer status is completed",
+      "Fetch transaction history via GET /transactions"
+     ]
+    },
+    {
+     "ref": "T4",
+     "title": "Merchant QR code payment processing",
+     "kind": "e2e",
+     "story_refs": [
+      "S4",
+      "S8"
+     ],
+     "api_refs": [
+      "A10"
+     ],
+     "steps": [
+      "Scan merchant QR payload and submit payment via POST /transfers",
+      "Measure response time to ensure it is under two seconds",
+      "Verify merchant account receives funds immediately"
+     ]
+    },
+    {
+     "ref": "T5",
+     "title": "Transaction history and monthly statements",
+     "kind": "integration",
+     "story_refs": [
+      "S5"
+     ],
+     "api_refs": [
+      "A11",
+      "A12"
+     ],
+     "steps": [
+      "Retrieve paginated history using GET /transactions",
+      "Request monthly statement generation using GET /statements",
+      "Verify PDF statement output is returned successfully"
+     ]
+    },
+    {
+     "ref": "T6",
+     "title": "Merchant bank settlement request",
+     "kind": "integration",
+     "story_refs": [
+      "S6"
+     ],
+     "api_refs": [
+      "A13",
+      "A14"
+     ],
+     "steps": [
+      "Calculate pending balance and submit settlement via POST /settlements",
+      "Poll settlement status via GET /settlements/{id}",
+      "Confirm bank transfer job is queued"
+     ]
+    },
+    {
+     "ref": "T7",
+     "title": "Compliance review and fraud flag resolution",
+     "kind": "security",
+     "story_refs": [
+      "S7"
+     ],
+     "api_refs": [
+      "A15",
+      "A16"
+     ],
+     "steps": [
+      "List flagged transactions using GET /compliance-flags",
+      "Attempt to resolve or freeze transfer via PATCH /compliance-flags/{id}",
+      "Verify unauthorized review attempts are blocked"
+     ]
+    },
+    {
+     "ref": "T8",
+     "title": "Idempotent exact-once ledger processing",
+     "kind": "unit",
+     "story_refs": [
+      "S9"
+     ],
+     "api_refs": [
+      "A10"
+     ],
+     "steps": [
+      "Submit a payment transfer request twice with the same idempotency key",
+      "Assert that the ledger debits the account only once",
+      "Verify immutable audit log records are written"
+     ]
+    },
+    {
+     "ref": "T9",
+     "title": "High availability and failover resilience",
+     "kind": "performance",
+     "story_refs": [
+      "S10"
+     ],
+     "api_refs": [
+      "A10"
+     ],
+     "steps": [
+      "Simulate primary database failure during peak transaction load",
+      "Verify automatic failover triggers within thirty seconds",
+      "Confirm zero dropped requests during zero-downtime deployment"
+     ]
+    }
+   ]
+  }
+ }
+}

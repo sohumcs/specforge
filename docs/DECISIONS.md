@@ -95,3 +95,23 @@ All model pages were verified on Hugging Face on 2026-11-26. The exact spaCy mod
 **Status:** Accepted · 2026-11-26
 **Decision.** `app/services/graph.py::_WALK_SQL` first builds `directed(src,dst)`: forward edge types as stored, plus `threatens`/`depends_on` reversed. A recursive walk over that view carries a `path` array to cut cycles, with `max_graph_depth` (12) as a hard cap, and returns each node's *minimum* hop distance. Upstream trace is the same query with the two direction sets swapped. Stale-marking and the `change_events` row are written in the same transaction as the edit.
 **Rejected.** Walking the graph in Python (N+1 queries). Postgres `CYCLE` clause (less obvious to readers than an explicit path array).
+
+## ADR-017 — Staged generation (3 LLM calls) instead of one big call
+**Status:** Accepted · 2026-11-26 (Phase 3)
+**Context.** I measured Groq's free plan from its response headers: `x-ratelimit-limit-tokens: 8000` per minute and 1,000 requests/day. `gpt-oss` reasoning tokens count toward that. A whole blueprint (~55 nodes) needs more than 8K tokens in a single response.
+**Decision.** Generate in three stages, each with its own small Pydantic schema: **requirements** (requirements, stories, risks) → **design** (modules, entities, APIs; sees a compact stage-1 summary) → **tests** (sees stories + APIs). Each stage is validated for shape (Pydantic) and meaning (`cross_reference_errors`: every `*_refs` must resolve). Problems go back to the model in a repair prompt, up to 2 times. If a stage exhausts every provider, the *whole* blueprint comes from the stale cache or the DemoProvider, so the stages can never be mixed inconsistently.
+**Measured (2026-11-26).** Gemini `gemini-3.5-flash-lite`: 58 nodes in 18.6 s with 0 repairs. Groq `gpt-oss-120b`: full blueprint in 18.9 s, and one real repair round fired (Groq's own 400 `json_validate_failed`).
+**Bonus.** Stage-level progress events, and in Phase 4 "regenerate subgraph" can re-run a single stage.
+
+## ADR-018 — Celery worker uses the threads pool
+**Decision.** `celery worker -P threads -c 2`. All threads share one in-memory copy of spaCy (and, from Phase 4, the sentence-transformer and NLI models). With prefork, every child process would load its own copy, which doesn't fit on the 12 GB VM. LLM calls are I/O-bound and model inference releases the GIL, so threads lose little throughput. It also works on Windows for local dev, where prefork doesn't.
+
+## ADR-019 — Own Redis fixed-window limiter instead of slowapi
+**Decision.** About 50 lines in `app/services/ratelimit.py`: `INCR` + `EXPIRE NX` in one pipeline. Limits apply per user, per IP and globally per day. The shared demo account is limited **per IP** (every recruiter shares one user ID), and the demo login is limited per IP too. Limits are checked only when a *new* job would start, so idempotent retries are free. If Redis is down the endpoint returns **503**, never unmetered access. 429 responses carry `Retry-After` and a friendly message pointing at the sample blueprints.
+**Rejected.** slowapi. It's decorator-based per route, which makes the demo-account special case and "count only new jobs" awkward.
+
+## ADR-020 — SSE progress = Redis pub/sub push + periodic DB resync
+**Decision.** The worker writes each step to Postgres (the source of truth), then publishes it on `specforge:jobs:<id>`. The SSE endpoint sends the current DB state first, forwards pub/sub messages, re-reads the DB every 5 s in case a message was lost, sends a keep-alive every 15 s, and closes on a terminal status. If Redis is down it falls back to polling the DB every second. The frontend will use fetch-based SSE so it can send the bearer token.
+
+## ADR-021 — Provider error taxonomy and circuit breaker
+**Decision.** Adapters raise `ProviderUnavailable` (429/5xx/timeout → move to the next provider and open a Redis circuit for `max(Retry-After, 60 s)`), `ProviderBadOutput` (bad JSON/schema → repair) or `ProviderConfigError` (400/401/403 → skip). Gemini puts its wait time in the error body (`google.rpc.RetryInfo.retryDelay`) and the adapter reads it. A short wait (≤ 20 s) is slept through once before falling over. This was seen live: while I generated the 4 samples, Gemini hit its per-minute quota, the breaker opened, and Groq took over.

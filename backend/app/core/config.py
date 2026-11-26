@@ -7,7 +7,7 @@ provided in production (`ENVIRONMENT=production` refuses the dev secret).
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field, model_validator
+from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 # Dev placeholder only; Settings refuses it when ENVIRONMENT=production.
@@ -39,6 +39,30 @@ class Settings(BaseSettings):
     sandbox_project_name: str = "Sandbox"
 
     max_graph_depth: int = 12
+
+    # --- LLM providers (keys come only from env / k8s Secrets) -------------
+    gemini_api_key: SecretStr = SecretStr("")
+    gemini_model: str = "gemini-3.5-flash-lite"
+    groq_api_key: SecretStr = SecretStr("")
+    groq_model: str = "openai/gpt-oss-120b"
+    # Order of the fallback chain; unknown or unconfigured names are skipped.
+    # The DemoProvider is always appended last, so generation never hard-fails.
+    llm_providers: list[str] = Field(default_factory=lambda: ["gemini", "groq"])
+    llm_timeout_seconds: float = 60.0
+    llm_repair_retries: int = 2
+    llm_breaker_seconds: int = 60
+    llm_max_wait_seconds: float = 20.0  # longest we sleep on a provider's Retry-After
+
+    # --- Generation rate limits (fixed windows in Redis) --------------------
+    generate_limit_per_user_hour: int = 10
+    generate_limit_per_ip_hour: int = 6
+    generate_limit_global_day: int = 300
+    demo_login_limit_per_ip_hour: int = 30
+
+    # --- Celery ----------------------------------------------------------------
+    celery_task_soft_limit: int = 240
+    celery_task_hard_limit: int = 300
+    celery_eager: bool = False  # run tasks inline (tests / no-worker dev)
 
     @model_validator(mode="after")
     def _refuse_weak_secret_in_prod(self) -> "Settings":

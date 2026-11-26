@@ -45,13 +45,13 @@ class MemberOut(BaseModel):
 
 class BlueprintIn(BaseModel):
     title: str = Field(min_length=1, max_length=200)
-    brief: str = Field(min_length=20, max_length=20000)
+    brief: str = Field(min_length=20, max_length=4000)
     settings: dict[str, Any] = Field(default_factory=dict)
 
 
 class BlueprintPatch(BaseModel):
     title: str | None = Field(default=None, min_length=1, max_length=200)
-    brief: str | None = Field(default=None, min_length=20, max_length=20000)
+    brief: str | None = Field(default=None, min_length=20, max_length=4000)
 
 
 class BlueprintOut(ORMModel):

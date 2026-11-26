@@ -17,6 +17,10 @@ dependencies = [
   "pyjwt>=2.10",
   "redis>=5.2",
   "prometheus-client>=0.21",
+  "httpx>=0.28",
+  "celery[redis]>=5.4,<6",
+  "spacy>=3.8,<3.9",
+  "en_core_web_sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl",
 ]
 
 [project.optional-dependencies]
@@ -35,6 +39,9 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 include = ["app*"]
+
+[tool.setuptools.package-data]
+"app.llm" = ["templates/*.md", "demo_data/*.json"]
 
 [tool.ruff]
 line-length = 100
@@ -56,12 +63,18 @@ ignore_missing_imports = true
 exclude = ["alembic/"]
 
 [[tool.mypy.overrides]]
+module = "app.worker.*"
+disallow_untyped_decorators = false  # Celery's @task decorator is untyped
+
+[[tool.mypy.overrides]]
 module = "tests.*"
 disallow_untyped_defs = false
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-q"
+addopts = "-q -m 'not live'"
+markers = ["live: calls real LLM providers (needs API keys); run with -m live"]
+filterwarnings = ["ignore::DeprecationWarning:starlette.*", "ignore::DeprecationWarning:fastapi.*"]
 
 [tool.coverage.run]
 source = ["app"]

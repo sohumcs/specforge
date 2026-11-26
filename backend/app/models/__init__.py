@@ -176,6 +176,7 @@ class Edge(Base):
 
 class Job(TimestampMixin, Base):
     __tablename__ = "jobs"
+    __table_args__ = (Index("ix_jobs_blueprint_status", "blueprint_id", "status"),)
 
     id: Mapped[uuid.UUID] = uuid_pk()
     blueprint_id: Mapped[uuid.UUID] = mapped_column(
@@ -240,6 +241,9 @@ class GenerationCache(Base):
     __tablename__ = "generation_cache"
 
     cache_key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    # Hash of the normalised brief alone: lets an older-prompt result serve as a
+    # fallback when every LLM is down ("stale cache" link of the chain).
+    brief_hash: Mapped[str] = mapped_column(String(64), index=True, nullable=False)
     prompt_version: Mapped[str] = mapped_column(String(20), nullable=False)
     provider: Mapped[str] = mapped_column(String(40), nullable=False)
     payload: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)

@@ -1,0 +1,707 @@
+{
+ "slug": "college-erp",
+ "title": "College ERP",
+ "brief": "An ERP for an engineering college with 5,000 students. Admins manage departments, courses, sections and timetables. Students enrol in electives, view timetables, pay semester fees online, download fee receipts and see exam results. Faculty mark attendance per lecture, upload internal marks and publish assignments. Parents get attendance and result notifications. Results day sees huge traffic spikes, and marks must never be editable after publication.",
+ "keywords": [
+  "college",
+  "student",
+  "students",
+  "faculty",
+  "course",
+  "courses",
+  "attendance",
+  "exam",
+  "exams",
+  "timetable",
+  "fee",
+  "fees"
+ ],
+ "generated_by": "gemini",
+ "stage_providers": {
+  "requirements": "gemini",
+  "design": "gemini",
+  "tests": "gemini"
+ },
+ "generated_at": "2026-11-26",
+ "draft": {
+  "requirements": {
+   "requirements": [
+    {
+     "ref": "R1",
+     "kind": "functional",
+     "nfr_category": "none",
+     "title": "Elective Enrolment",
+     "description": "Students must be able to select and enrol in available college elective courses.",
+     "priority": "must"
+    },
+    {
+     "ref": "R2",
+     "kind": "functional",
+     "nfr_category": "none",
+     "title": "Online Fee Payment",
+     "description": "Students must be able to pay semester fees online and download corresponding fee receipts.",
+     "priority": "must"
+    },
+    {
+     "ref": "R3",
+     "kind": "functional",
+     "nfr_category": "none",
+     "title": "Attendance Marking",
+     "description": "Faculty must be able to record attendance per lecture session for assigned sections.",
+     "priority": "must"
+    },
+    {
+     "ref": "R4",
+     "kind": "functional",
+     "nfr_category": "none",
+     "title": "Result Publishing",
+     "description": "Faculty must be able to upload internal marks and publish exam results for students.",
+     "priority": "must"
+    },
+    {
+     "ref": "R5",
+     "kind": "non_functional",
+     "nfr_category": "performance",
+     "title": "Result Day Performance",
+     "description": "The system must maintain sub-second response times during high traffic spikes on results day.",
+     "priority": "must"
+    },
+    {
+     "ref": "R6",
+     "kind": "non_functional",
+     "nfr_category": "security",
+     "title": "Immutable Marks Security",
+     "description": "Published marks and exam results must never be editable under any circumstances by any user role.",
+     "priority": "must"
+    },
+    {
+     "ref": "R7",
+     "kind": "non_functional",
+     "nfr_category": "availability",
+     "title": "High Availability Infrastructure",
+     "description": "The ERP must ensure 99.9% uptime during critical operational windows such as fee deadlines.",
+     "priority": "should"
+    }
+   ],
+   "stories": [
+    {
+     "ref": "S1",
+     "requirement_refs": [
+      "R1"
+     ],
+     "title": "As a student, I want to enrol in elective courses so that I can complete my curriculum requirements.",
+     "acceptance_criteria": [
+      "Given the elective selection window is open, when a student selects an elective, then the system saves the enrolment choice.",
+      "Given maximum seat capacity is reached, when a student attempts to enrol, then the system displays a seat-full error."
+     ]
+    },
+    {
+     "ref": "S2",
+     "requirement_refs": [
+      "R2"
+     ],
+     "title": "As a student, I want to pay semester fees online so that I clear my financial dues securely.",
+     "acceptance_criteria": [
+      "Given a student has a pending fee balance, when they complete the payment gateway transaction, then the fee status updates to paid.",
+      "Given a successful payment, when the student clicks download, then a valid PDF fee receipt is generated."
+     ]
+    },
+    {
+     "ref": "S3",
+     "requirement_refs": [
+      "R3"
+     ],
+     "title": "As a faculty member, I want to mark lecture attendance so that student participation is tracked accurately.",
+     "acceptance_criteria": [
+      "Given a lecture session is active, when faculty submits the student attendance list, then attendance records are saved.",
+      "Given attendance is submitted, when parents check notifications, then they receive the updated attendance status."
+     ]
+    },
+    {
+     "ref": "S4",
+     "requirement_refs": [
+      "R4"
+     ],
+     "title": "As faculty, I want to upload internal marks so that students can view their continuous assessment scores.",
+     "acceptance_criteria": [
+      "Given an uploaded spreadsheet of marks, when faculty validates the format, then marks populate the course ledger.",
+      "Given marks are finalized, when faculty clicks publish, then student portals display the new scores."
+     ]
+    },
+    {
+     "ref": "S5",
+     "requirement_refs": [
+      "R5"
+     ],
+     "title": "As a system administrator, I want to ensure high performance under load so that users do not experience timeouts on result day.",
+     "acceptance_criteria": [
+      "Given simulated peak load of 5,000 concurrent users, when results are accessed, then page load times remain under one second.",
+      "Given heavy traffic, when database queries execute, then read-replicas handle the query load without locking writes."
+     ]
+    },
+    {
+     "ref": "S6",
+     "requirement_refs": [
+      "R6"
+     ],
+     "title": "As a compliance officer, I want immutable published marks so that grade integrity is strictly preserved.",
+     "acceptance_criteria": [
+      "Given exam results have been published, when any user attempts to modify records via UI or API, then the action is rejected.",
+      "Given published marks, when database audit logs are reviewed, then data integrity constraints prevent row updates."
+     ]
+    },
+    {
+     "ref": "S7",
+     "requirement_refs": [
+      "R7"
+     ],
+     "title": "As an IT manager, I want high system availability so that users can access the ERP without unexpected downtime.",
+     "acceptance_criteria": [
+      "Given scheduled maintenance, when traffic shifts to redundant nodes, then zero downtime is observed by end users.",
+      "Given an unexpected server crash, when auto-recovery triggers, then services restore within thirty seconds."
+     ]
+    }
+   ],
+   "risks": [
+    {
+     "ref": "K1",
+     "title": "Result Day Traffic Surge Outage",
+     "description": "Simultaneous access by 5,000 students on results day may crash the database and application servers.",
+     "likelihood": "high",
+     "impact": "high",
+     "mitigation": "Implement caching layers, read-replicas, and auto-scaling cloud infrastructure prior to result publication.",
+     "requirement_refs": [
+      "R5",
+      "R7"
+     ]
+    },
+    {
+     "ref": "K2",
+     "title": "Unauthorized Mark Modification",
+     "description": "Malicious actors or compromised faculty accounts could attempt to alter published grades.",
+     "likelihood": "medium",
+     "impact": "high",
+     "mitigation": "Enforce strict database-level immutability constraints and role-based access control once marks are published.",
+     "requirement_refs": [
+      "R6"
+     ]
+    },
+    {
+     "ref": "K3",
+     "title": "Payment Gateway Integration Failures",
+     "description": "Third-party payment gateway downtime could prevent students from paying fees before deadlines.",
+     "likelihood": "medium",
+     "impact": "medium",
+     "mitigation": "Integrate multiple redundant payment gateways and implement asynchronous reconciliation jobs.",
+     "requirement_refs": [
+      "R2"
+     ]
+    }
+   ]
+  },
+  "design": {
+   "modules": [
+    {
+     "ref": "M1",
+     "name": "EnrolmentModule",
+     "responsibility": "Manages student elective course selections and seat allocations.",
+     "story_refs": [
+      "S1",
+      "S5"
+     ],
+     "depends_on": []
+    },
+    {
+     "ref": "M2",
+     "name": "FinanceModule",
+     "responsibility": "Handles online fee payments and receipt generation.",
+     "story_refs": [
+      "S2",
+      "S5",
+      "S7"
+     ],
+     "depends_on": []
+    },
+    {
+     "ref": "M3",
+     "name": "AcademicsModule",
+     "responsibility": "Tracks lecture attendance and internal assessment marks.",
+     "story_refs": [
+      "S3",
+      "S4",
+      "S6",
+      "S7"
+     ],
+     "depends_on": []
+    },
+    {
+     "ref": "M4",
+     "name": "InfrastructureModule",
+     "responsibility": "Ensures high availability, caching, and infrastructure resilience.",
+     "story_refs": [
+      "S5",
+      "S7"
+     ],
+     "depends_on": []
+    }
+   ],
+   "entities": [
+    {
+     "ref": "E1",
+     "name": "Student",
+     "description": "Represents an enrolled student in the engineering college.",
+     "fields": [
+      {
+       "name": "id",
+       "type": "uuid",
+       "primary_key": true,
+       "nullable": false
+      },
+      {
+       "name": "roll_number",
+       "type": "string",
+       "primary_key": false,
+       "nullable": false
+      },
+      {
+       "name": "name",
+       "type": "string",
+       "primary_key": false,
+       "nullable": false
+      }
+     ],
+     "relations": []
+    },
+    {
+     "ref": "E2",
+     "name": "Elective",
+     "description": "Elective courses available for student enrolment.",
+     "fields": [
+      {
+       "name": "id",
+       "type": "uuid",
+       "primary_key": true,
+       "nullable": false
+      },
+      {
+       "name": "code",
+       "type": "string",
+       "primary_key": false,
+       "nullable": false
+      },
+      {
+       "name": "capacity",
+       "type": "integer",
+       "primary_key": false,
+       "nullable": false
+      }
+     ],
+     "relations": []
+    },
+    {
+     "ref": "E3",
+     "name": "FeePayment",
+     "description": "Records online semester fee transactions and status.",
+     "fields": [
+      {
+       "name": "id",
+       "type": "uuid",
+       "primary_key": true,
+       "nullable": false
+      },
+      {
+       "name": "amount",
+       "type": "decimal",
+       "primary_key": false,
+       "nullable": false
+      },
+      {
+       "name": "status",
+       "type": "string",
+       "primary_key": false,
+       "nullable": false
+      }
+     ],
+     "relations": [
+      {
+       "target_ref": "E1",
+       "kind": "many_to_one"
+      }
+     ]
+    },
+    {
+     "ref": "E4",
+     "name": "AttendanceRecord",
+     "description": "Daily lecture attendance per student and course.",
+     "fields": [
+      {
+       "name": "id",
+       "type": "uuid",
+       "primary_key": true,
+       "nullable": false
+      },
+      {
+       "name": "date",
+       "type": "date",
+       "primary_key": false,
+       "nullable": false
+      },
+      {
+       "name": "present",
+       "type": "boolean",
+       "primary_key": false,
+       "nullable": false
+      }
+     ],
+     "relations": [
+      {
+       "target_ref": "E1",
+       "kind": "many_to_one"
+      }
+     ]
+    },
+    {
+     "ref": "E5",
+     "name": "InternalMark",
+     "description": "Internal assessment marks marked by faculty, immutable when published.",
+     "fields": [
+      {
+       "name": "id",
+       "type": "uuid",
+       "primary_key": true,
+       "nullable": false
+      },
+      {
+       "name": "score",
+       "type": "decimal",
+       "primary_key": false,
+       "nullable": false
+      },
+      {
+       "name": "is_published",
+       "type": "boolean",
+       "primary_key": false,
+       "nullable": false
+      }
+     ],
+     "relations": [
+      {
+       "target_ref": "E1",
+       "kind": "many_to_one"
+      }
+     ]
+    },
+    {
+     "ref": "E6",
+     "name": "FeeReceipt",
+     "description": "Downloadable fee payment receipt document reference.",
+     "fields": [
+      {
+       "name": "id",
+       "type": "uuid",
+       "primary_key": true,
+       "nullable": false
+      },
+      {
+       "name": "receipt_number",
+       "type": "string",
+       "primary_key": false,
+       "nullable": false
+      }
+     ],
+     "relations": [
+      {
+       "target_ref": "E3",
+       "kind": "one_to_one"
+      }
+     ]
+    }
+   ],
+   "apis": [
+    {
+     "ref": "A1",
+     "method": "GET",
+     "path": "/students",
+     "summary": "List all students",
+     "module_ref": "M1",
+     "entity_refs": [
+      "E1"
+     ]
+    },
+    {
+     "ref": "A2",
+     "method": "POST",
+     "path": "/students",
+     "summary": "Create a student record",
+     "module_ref": "M1",
+     "entity_refs": [
+      "E1"
+     ]
+    },
+    {
+     "ref": "A3",
+     "method": "GET",
+     "path": "/electives",
+     "summary": "List available electives",
+     "module_ref": "M1",
+     "entity_refs": [
+      "E2"
+     ]
+    },
+    {
+     "ref": "A4",
+     "method": "POST",
+     "path": "/electives",
+     "summary": "Create an elective course",
+     "module_ref": "M1",
+     "entity_refs": [
+      "E2"
+     ]
+    },
+    {
+     "ref": "A5",
+     "method": "POST",
+     "path": "/students/{id}/electives",
+     "summary": "Enrol student in elective",
+     "module_ref": "M1",
+     "entity_refs": [
+      "E1",
+      "E2"
+     ]
+    },
+    {
+     "ref": "A6",
+     "method": "GET",
+     "path": "/fee-payments",
+     "summary": "List fee payments",
+     "module_ref": "M2",
+     "entity_refs": [
+      "E3"
+     ]
+    },
+    {
+     "ref": "A7",
+     "method": "POST",
+     "path": "/fee-payments",
+     "summary": "Initiate online fee payment",
+     "module_ref": "M2",
+     "entity_refs": [
+      "E3"
+     ]
+    },
+    {
+     "ref": "A8",
+     "method": "GET",
+     "path": "/fee-receipts/{id}",
+     "summary": "Download fee receipt",
+     "module_ref": "M2",
+     "entity_refs": [
+      "E3",
+      "E6"
+     ]
+    },
+    {
+     "ref": "A9",
+     "method": "POST",
+     "path": "/fee-receipts",
+     "summary": "Generate fee receipt",
+     "module_ref": "M2",
+     "entity_refs": [
+      "E6"
+     ]
+    },
+    {
+     "ref": "A10",
+     "method": "GET",
+     "path": "/attendance-records",
+     "summary": "View attendance records",
+     "module_ref": "M3",
+     "entity_refs": [
+      "E4"
+     ]
+    },
+    {
+     "ref": "A11",
+     "method": "POST",
+     "path": "/attendance-records",
+     "summary": "Mark lecture attendance",
+     "module_ref": "M3",
+     "entity_refs": [
+      "E4"
+     ]
+    },
+    {
+     "ref": "A12",
+     "method": "GET",
+     "path": "/internal-marks",
+     "summary": "View internal marks",
+     "module_ref": "M3",
+     "entity_refs": [
+      "E5"
+     ]
+    },
+    {
+     "ref": "A13",
+     "method": "POST",
+     "path": "/internal-marks",
+     "summary": "Upload internal marks",
+     "module_ref": "M3",
+     "entity_refs": [
+      "E5"
+     ]
+    },
+    {
+     "ref": "A14",
+     "method": "PATCH",
+     "path": "/internal-marks/{id}",
+     "summary": "Update internal marks before publication",
+     "module_ref": "M3",
+     "entity_refs": [
+      "E5"
+     ]
+    }
+   ]
+  },
+  "tests": {
+   "tests": [
+    {
+     "ref": "T1",
+     "title": "Elective enrolment success and seat capacity limit enforcement",
+     "kind": "integration",
+     "story_refs": [
+      "S1"
+     ],
+     "api_refs": [
+      "A3",
+      "A5"
+     ],
+     "steps": [
+      "Fetch available electives list via GET /electives.",
+      "Attempt to enrol student into elective via POST /students/{id}/electives.",
+      "Verify success response when seats are available.",
+      "Verify seat-full error response when capacity is fully reached."
+     ]
+    },
+    {
+     "ref": "T2",
+     "title": "Online fee payment transaction and PDF receipt generation",
+     "kind": "e2e",
+     "story_refs": [
+      "S2"
+     ],
+     "api_refs": [
+      "A7",
+      "A8"
+     ],
+     "steps": [
+      "Initiate online fee payment via POST /fee-payments.",
+      "Simulate successful gateway callback to update fee status.",
+      "Request fee receipt download via GET /fee-receipts/{id}.",
+      "Verify that a valid PDF receipt stream is returned."
+     ]
+    },
+    {
+     "ref": "T3",
+     "title": "Faculty lecture attendance submission and parent notification",
+     "kind": "integration",
+     "story_refs": [
+      "S3"
+     ],
+     "api_refs": [
+      "A11",
+      "A10"
+     ],
+     "steps": [
+      "Submit student attendance list for active lecture via POST /attendance-records.",
+      "Verify attendance records are successfully saved.",
+      "Trigger notification dispatcher and verify parent notification status update."
+     ]
+    },
+    {
+     "ref": "T4",
+     "title": "Internal marks upload, validation, and publication workflow",
+     "kind": "integration",
+     "story_refs": [
+      "S4"
+     ],
+     "api_refs": [
+      "A13",
+      "A12",
+      "A14"
+     ],
+     "steps": [
+      "Upload internal marks spreadsheet via POST /internal-marks.",
+      "Validate format and populate course ledger.",
+      "Update pre-publication marks using PATCH /internal-marks/{id}.",
+      "Publish marks so student portals display scores."
+     ]
+    },
+    {
+     "ref": "T5",
+     "title": "High concurrency load test on result day using read-replicas",
+     "kind": "performance",
+     "story_refs": [
+      "S5"
+     ],
+     "api_refs": [
+      "A12"
+     ],
+     "steps": [
+      "Simulate concurrent traffic of 5,000 users requesting exam results.",
+      "Monitor page load times to ensure they remain under one second.",
+      "Verify read-replicas handle query load without locking database writes."
+     ]
+    },
+    {
+     "ref": "T6",
+     "title": "Immutability check for published exam results",
+     "kind": "security",
+     "story_refs": [
+      "S6"
+     ],
+     "api_refs": [
+      "A14"
+     ],
+     "steps": [
+      "Publish internal exam results to lock the records.",
+      "Attempt to modify published marks via PATCH /internal-marks/{id}.",
+      "Verify that the API rejects the modification request.",
+      "Review database audit logs to ensure data integrity constraints prevent row updates."
+     ]
+    },
+    {
+     "ref": "T7",
+     "title": "Zero downtime traffic shifting during scheduled maintenance",
+     "kind": "integration",
+     "story_refs": [
+      "S7"
+     ],
+     "api_refs": [
+      "A1"
+     ],
+     "steps": [
+      "Initiate scheduled maintenance node draining.",
+      "Shift incoming ERP traffic to redundant nodes automatically.",
+      "Verify zero downtime and continuous availability for end users via GET /students."
+     ]
+    },
+    {
+     "ref": "T8",
+     "title": "Auto-recovery test following unexpected server crash",
+     "kind": "e2e",
+     "story_refs": [
+      "S7"
+     ],
+     "api_refs": [
+      "A1"
+     ],
+     "steps": [
+      "Simulate an unexpected server crash on the primary ERP instance.",
+      "Trigger automatic health check and recovery routines.",
+      "Verify services are fully restored and responsive within thirty seconds."
+     ]
+    }
+   ]
+  }
+ }
+}

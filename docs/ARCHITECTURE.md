@@ -68,20 +68,22 @@ sequenceDiagram
     API-->>UI: event: done {score, provider}
 ```
 
-**Steps reported to the UI:** `parsing → generating → rule_check → ml_check → scoring → done`.
+**Steps reported to the UI:** `parsing → generating_requirements → generating_design → generating_tests → saving → (Phase 4: rule_check → ml_check → scoring) → done`.
+
+Generation is **staged** (ADR-017): three LLM calls with three small schemas, so each fits Groq's 8K tokens/minute free limit, and each can be repaired or re-run on its own.
 
 ### 2.1 LLM provider layer
 ```
 LLMProvider (Protocol)
   name: str
   generate_json(prompt: str, schema: type[BaseModel]) -> BaseModel
-├── GeminiProvider     (google-genai SDK, response JSON schema)
-├── GroqProvider       (OpenAI-compatible, response_format=json_schema strict)
-├── CachedProvider     (lookup generation_cache by sha256(brief+settings+prompt_version))
-└── DemoProvider       (deterministic: keyword-matched canned blueprints + templated fallback)
-FallbackChain([Gemini, Groq, Cached, Demo])
+├── GeminiProvider     app/llm/providers/gemini.py  (REST generateContent + responseJsonSchema)
+├── GroqProvider       app/llm/providers/groq.py    (OpenAI-compatible, json_schema strict)
+└── DemoProvider       app/llm/providers/demo.py    (4 curated samples, else spaCy-driven templates)
+Chain (app/llm/chain.py): exact cache hit → [gemini → groq] per stage → stale cache (same brief,
+older prompt) → DemoProvider for the whole blueprint
 ```
-- Each call: render template from `backend/app/llm/prompts/<name>.v<N>.md` → call → `schema.model_validate_json` → on `ValidationError`, re-prompt with the error text (max 2 retries) → on provider error/quota (`429`, timeout, 5xx) move to next provider.
+- Each call: render template from `backend/app/llm/templates/<name>.v<N>.md` → call → `schema.model_validate_json` → on `ValidationError`, re-prompt with the error text (max 2 retries) → on provider error/quota (`429`, timeout, 5xx) move to next provider.
 - Per-provider circuit breaker in Redis (open for 60 s after a quota error) so we don't hammer a dead provider.
 - The provider that answered is stored on the blueprint and shown as a badge in the UI.
 - Model IDs are **env config**, not code (free-tier model names churn — see `COSTS.md`).

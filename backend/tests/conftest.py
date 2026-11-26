@@ -9,6 +9,7 @@ the graph traversal is a recursive CTE and embeddings use pgvector types.
   isolated and fast without truncating tables.
 """
 
+import contextlib
 import os
 
 os.environ.setdefault(
@@ -17,6 +18,13 @@ os.environ.setdefault(
 os.environ["DATABASE_URL"] = os.environ["TEST_DATABASE_URL"]
 os.environ.setdefault("REDIS_URL", "redis://localhost:6380/15")
 os.environ["ENVIRONMENT"] = "test"
+# Never let unit tests spend real LLM quota: blank keys override backend/.env.
+# Live provider tests are opt-in: SPECFORGE_LIVE_TESTS=1 pytest -m live
+if os.environ.get("SPECFORGE_LIVE_TESTS") != "1":
+    os.environ["GEMINI_API_KEY"] = ""
+    os.environ["GROQ_API_KEY"] = ""
+os.environ["CELERY_EAGER"] = "false"
+os.environ["JWT_SECRET"] = "test-only-secret-0123456789-abcdefghijklmnop"
 
 from collections.abc import Callable, Iterator
 from typing import Any
@@ -126,3 +134,16 @@ def api(client: TestClient) -> Callable[..., Any]:
         return getattr(client, method)(f"/api/v1{path}", headers=headers or {}, **kw)
 
     return _call
+
+
+@pytest.fixture(autouse=True)
+def _clean_redis() -> Iterator[None]:
+    """Rate-limit counters and breakers live in Redis (db 15 in tests): reset per test."""
+    import redis as redis_lib
+
+    from app.core.config import get_settings
+
+    client = redis_lib.Redis.from_url(get_settings().redis_url, socket_connect_timeout=1)
+    with contextlib.suppress(redis_lib.RedisError):
+        client.flushdb()  # tests that need Redis will fail loudly on their own
+    yield

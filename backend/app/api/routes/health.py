@@ -16,6 +16,7 @@ from sqlalchemy import text
 
 from app.core.config import get_settings
 from app.db.session import get_engine
+from app.llm.breaker import RedisBreaker
 
 router = APIRouter(tags=["health"])
 log = logging.getLogger("specforge.health")
@@ -60,10 +61,25 @@ def ready() -> JSONResponse:
 def status() -> dict[str, Any]:
     s = get_settings()
     components = {"api": {"ok": True}, "database": check_db(), "redis": check_redis()}
+    breaker = RedisBreaker()
+    providers = {
+        name: {
+            "configured": bool(key.get_secret_value()),
+            "model": model,
+            "circuit_open_seconds": breaker.remaining(name),
+        }
+        for name, key, model in (
+            ("gemini", s.gemini_api_key, s.gemini_model),
+            ("groq", s.groq_api_key, s.groq_model),
+        )
+    }
+    providers["demo"] = {"configured": True, "model": "templates-v1", "circuit_open_seconds": 0}
     return {
         "version": s.app_version,
         "commit": s.git_sha,
         "ci_run_url": s.ci_run_url,
         "environment": s.environment,
         "components": components,
+        "llm_providers": providers,
+        "llm_chain": [*s.llm_providers, "cache", "demo"],
     }

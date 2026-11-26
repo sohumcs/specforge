@@ -1,0 +1,864 @@
+{
+ "slug": "hospital-appointments",
+ "title": "Hospital appointment system",
+ "brief": "An appointment system for a multi-speciality hospital. Patients register, search doctors by speciality, see available slots and book, reschedule or cancel appointments, and receive SMS and email reminders. Receptionists manage doctor schedules, leave and walk-in queues. Doctors see their daily list, view patient history and write e-prescriptions. Patient records are confidential and access must be audited. The hospital wants fewer no-shows and shorter waiting times.",
+ "keywords": [
+  "hospital",
+  "patient",
+  "patients",
+  "doctor",
+  "doctors",
+  "appointment",
+  "appointments",
+  "clinic",
+  "prescription",
+  "receptionist"
+ ],
+ "generated_by": "gemini",
+ "stage_providers": {
+  "requirements": "gemini",
+  "design": "gemini",
+  "tests": "gemini"
+ },
+ "generated_at": "2026-11-26",
+ "draft": {
+  "requirements": {
+   "requirements": [
+    {
+     "ref": "R1",
+     "kind": "functional",
+     "nfr_category": "none",
+     "title": "Patient Registration and Search",
+     "description": "Patients must be able to register accounts and search for doctors by speciality to find care.",
+     "priority": "must"
+    },
+    {
+     "ref": "R2",
+     "kind": "functional",
+     "nfr_category": "none",
+     "title": "Appointment Lifecycle Management",
+     "description": "Patients and receptionists must be able to book, reschedule, and cancel appointments.",
+     "priority": "must"
+    },
+    {
+     "ref": "R3",
+     "kind": "functional",
+     "nfr_category": "none",
+     "title": "Automated Reminders",
+     "description": "The system must send automated SMS and email reminders to patients for their upcoming appointments.",
+     "priority": "should"
+    },
+    {
+     "ref": "R4",
+     "kind": "functional",
+     "nfr_category": "none",
+     "title": "Doctor Schedule and Queue Management",
+     "description": "Receptionists must manage doctor schedules, leave requests, and walk-in queues.",
+     "priority": "must"
+    },
+    {
+     "ref": "R5",
+     "kind": "functional",
+     "nfr_category": "none",
+     "title": "Clinical E-Prescriptions and History",
+     "description": "Doctors must view daily lists, access patient history, and write e-prescriptions.",
+     "priority": "must"
+    },
+    {
+     "ref": "R6",
+     "kind": "non_functional",
+     "nfr_category": "performance",
+     "title": "High Performance Search and Booking",
+     "description": "Slot search and booking APIs must respond in under 500ms under peak load.",
+     "priority": "must"
+    },
+    {
+     "ref": "R7",
+     "kind": "non_functional",
+     "nfr_category": "security",
+     "title": "Confidentiality and Audit Logging",
+     "description": "Patient medical records must be encrypted at rest and all record accesses must generate audit logs.",
+     "priority": "must"
+    },
+    {
+     "ref": "R8",
+     "kind": "non_functional",
+     "nfr_category": "availability",
+     "title": "System High Availability",
+     "description": "The appointment system must maintain 99.9% uptime during operational hours.",
+     "priority": "should"
+    }
+   ],
+   "stories": [
+    {
+     "ref": "S1",
+     "requirement_refs": [
+      "R1"
+     ],
+     "title": "As a patient, I want to register and search doctors by speciality so that I can find the right physician.",
+     "acceptance_criteria": [
+      "Given I am on the registration page, when I submit valid details, then my account is created.",
+      "Given I am logged in, when I select a speciality, then I see a list of matching doctors."
+     ]
+    },
+    {
+     "ref": "S2",
+     "requirement_refs": [
+      "R2"
+     ],
+     "title": "As a patient, I want to book an available slot so that I can secure an appointment.",
+     "acceptance_criteria": [
+      "Given I view a doctor profile, when I select an open slot and confirm, then the appointment is booked.",
+      "Given I have a booked appointment, when I request a reschedule, then new slots are displayed."
+     ]
+    },
+    {
+     "ref": "S3",
+     "requirement_refs": [
+      "R2"
+     ],
+     "title": "As a patient, I want to cancel my appointment so that the slot becomes available for others.",
+     "acceptance_criteria": [
+      "Given I view my appointments, when I click cancel, then the appointment status updates to cancelled."
+     ]
+    },
+    {
+     "ref": "S4",
+     "requirement_refs": [
+      "R3"
+     ],
+     "title": "As a patient, I want to receive SMS and email reminders so that I do not miss my appointment.",
+     "acceptance_criteria": [
+      "Given an appointment is 24 hours away, when the reminder job runs, then an SMS and email are sent.",
+      "Given notification fails, when an error occurs, then the system retries delivery."
+     ]
+    },
+    {
+     "ref": "S5",
+     "requirement_refs": [
+      "R4"
+     ],
+     "title": "As a receptionist, I want to manage doctor schedules and leave so that bookings match doctor availability.",
+     "acceptance_criteria": [
+      "Given I access the schedule manager, when I add a leave period, then conflicting slots are blocked.",
+      "Given a walk-in patient arrives, when I add them to the queue, then their position is generated."
+     ]
+    },
+    {
+     "ref": "S6",
+     "requirement_refs": [
+      "R5"
+     ],
+     "title": "As a doctor, I want to view my daily list and patient history so that I am prepared for consultations.",
+     "acceptance_criteria": [
+      "Given I log in, when I open my daily list, then I see all assigned patients in chronological order.",
+      "Given I select a patient, when I view history, then past diagnoses and prescriptions are shown."
+     ]
+    },
+    {
+     "ref": "S7",
+     "requirement_refs": [
+      "R5"
+     ],
+     "title": "As a doctor, I want to write e-prescriptions so that patients receive clear medication instructions.",
+     "acceptance_criteria": [
+      "Given I am viewing a patient consultation, when I submit prescription details, then an e-prescription is saved."
+     ]
+    },
+    {
+     "ref": "S8",
+     "requirement_refs": [
+      "R6"
+     ],
+     "title": "As a system administrator, I want fast API responses so that users experience no lag during booking.",
+     "acceptance_criteria": [
+      "Given high user traffic, when a search request is sent, then response time is under 500ms.",
+      "Given multiple concurrent bookings occur, when slots are checked, then race conditions are prevented."
+     ]
+    },
+    {
+     "ref": "S9",
+     "requirement_refs": [
+      "R7"
+     ],
+     "title": "As a compliance officer, I want audit logs of record accesses so that patient confidentiality is enforced.",
+     "acceptance_criteria": [
+      "Given a doctor views a medical record, when the record opens, then an audit log entry is created.",
+      "Given data is stored in the database, when checked, then patient health records are encrypted at rest."
+     ]
+    },
+    {
+     "ref": "S10",
+     "requirement_refs": [
+      "R8"
+     ],
+     "title": "As a hospital director, I want high system availability so that operations are never disrupted.",
+     "acceptance_criteria": [
+      "Given normal hospital hours, when traffic spikes, then failover mechanisms keep the system online.",
+      "Given a server crash occurs, when redundancy triggers, then uptime SLA is maintained."
+     ]
+    }
+   ],
+   "risks": [
+    {
+     "ref": "K1",
+     "title": "Double-booking of time slots",
+     "description": "Concurrent booking requests for the same doctor slot could lead to double-booking.",
+     "likelihood": "medium",
+     "impact": "high",
+     "mitigation": "Implement database-level pessimistic locking or serializable transactions on slot availability checks.",
+     "requirement_refs": [
+      "R2",
+      "R6"
+     ]
+    },
+    {
+     "ref": "K2",
+     "title": "Breach of patient medical records",
+     "description": "Unauthorized access or data leaks of confidential patient histories.",
+     "likelihood": "low",
+     "impact": "high",
+     "mitigation": "Enforce strict role-based access control, field-level encryption, and immutable audit logs.",
+     "requirement_refs": [
+      "R7"
+     ]
+    },
+    {
+     "ref": "K3",
+     "title": "SMS and Email delivery failures",
+     "description": "External third-party gateway downtime causes patients to miss appointment reminders, increasing no-shows.",
+     "likelihood": "medium",
+     "impact": "medium",
+     "mitigation": "Use redundant notification providers with automatic failover and asynchronous retry queues.",
+     "requirement_refs": [
+      "R3"
+     ]
+    }
+   ]
+  },
+  "design": {
+   "modules": [
+    {
+     "ref": "M1",
+     "name": "Patient Management Module",
+     "responsibility": "Handles patient registration, profile updates, and patient search functionalities.",
+     "story_refs": [
+      "S1"
+     ],
+     "depends_on": []
+    },
+    {
+     "ref": "M2",
+     "name": "Scheduling Module",
+     "responsibility": "Manages doctor schedules, leave requests, walk-in queues, and slot availability.",
+     "story_refs": [
+      "S5",
+      "S8"
+     ],
+     "depends_on": []
+    },
+    {
+     "ref": "M3",
+     "name": "Appointment Lifecycle Module",
+     "responsibility": "Handles booking, cancellation, rescheduling, and state transitions of appointments.",
+     "story_refs": [
+      "S2",
+      "S3",
+      "S8"
+     ],
+     "depends_on": [
+      "M1",
+      "M2"
+     ]
+    },
+    {
+     "ref": "M4",
+     "name": "Notification Module",
+     "responsibility": "Dispatches automated SMS and email reminders to patients for upcoming appointments.",
+     "story_refs": [
+      "S4"
+     ],
+     "depends_on": [
+      "M3"
+     ]
+    },
+    {
+     "ref": "M5",
+     "name": "Clinical Module",
+     "responsibility": "Manages doctor daily lists, patient medical history viewing, and e-prescription creation.",
+     "story_refs": [
+      "S6",
+      "S7",
+      "S9"
+     ],
+     "depends_on": [
+      "M1",
+      "M3"
+     ]
+    },
+    {
+     "ref": "M6",
+     "name": "Auditing and System Module",
+     "responsibility": "Enforces strict audit logging for patient data access and monitors system availability.",
+     "story_refs": [
+      "S9",
+      "S10"
+     ],
+     "depends_on": [
+      "M5"
+     ]
+    }
+   ],
+   "entities": [
+    {
+     "ref": "E1",
+     "name": "Patient",
+     "description": "Represents a registered patient in the hospital system.",
+     "fields": [
+      {
+       "name": "id",
+       "type": "string",
+       "primary_key": true,
+       "nullable": false
+      },
+      {
+       "name": "full_name",
+       "type": "string",
+       "primary_key": false,
+       "nullable": false
+      },
+      {
+       "name": "email",
+       "type": "string",
+       "primary_key": false,
+       "nullable": false
+      },
+      {
+       "name": "phone_number",
+       "type": "string",
+       "primary_key": false,
+       "nullable": false
+      }
+     ],
+     "relations": [
+      {
+       "target_ref": "E3",
+       "kind": "one_to_many"
+      },
+      {
+       "target_ref": "E4",
+       "kind": "one_to_many"
+      }
+     ]
+    },
+    {
+     "ref": "E2",
+     "name": "Doctor",
+     "description": "Represents a physician with a specific medical speciality.",
+     "fields": [
+      {
+       "name": "id",
+       "type": "string",
+       "primary_key": true,
+       "nullable": false
+      },
+      {
+       "name": "full_name",
+       "type": "string",
+       "primary_key": false,
+       "nullable": false
+      },
+      {
+       "name": "speciality",
+       "type": "string",
+       "primary_key": false,
+       "nullable": false
+      }
+     ],
+     "relations": [
+      {
+       "target_ref": "E3",
+       "kind": "one_to_many"
+      }
+     ]
+    },
+    {
+     "ref": "E3",
+     "name": "Appointment",
+     "description": "Represents a booked slot between a patient and a doctor.",
+     "fields": [
+      {
+       "name": "id",
+       "type": "string",
+       "primary_key": true,
+       "nullable": false
+      },
+      {
+       "name": "patient_id",
+       "type": "string",
+       "primary_key": false,
+       "nullable": false
+      },
+      {
+       "name": "doctor_id",
+       "type": "string",
+       "primary_key": false,
+       "nullable": false
+      },
+      {
+       "name": "slot_time",
+       "type": "string",
+       "primary_key": false,
+       "nullable": false
+      },
+      {
+       "name": "status",
+       "type": "string",
+       "primary_key": false,
+       "nullable": false
+      }
+     ],
+     "relations": [
+      {
+       "target_ref": "E1",
+       "kind": "many_to_one"
+      },
+      {
+       "target_ref": "E2",
+       "kind": "many_to_one"
+      },
+      {
+       "target_ref": "E5",
+       "kind": "one_to_many"
+      }
+     ]
+    },
+    {
+     "ref": "E4",
+     "name": "MedicalHistory",
+     "description": "Contains clinical records and history for a patient.",
+     "fields": [
+      {
+       "name": "id",
+       "type": "string",
+       "primary_key": true,
+       "nullable": false
+      },
+      {
+       "name": "patient_id",
+       "type": "string",
+       "primary_key": false,
+       "nullable": false
+      },
+      {
+       "name": "details",
+       "type": "string",
+       "primary_key": false,
+       "nullable": false
+      }
+     ],
+     "relations": [
+      {
+       "target_ref": "E1",
+       "kind": "many_to_one"
+      }
+     ]
+    },
+    {
+     "ref": "E5",
+     "name": "Prescription",
+     "description": "Contains e-prescription data issued during an appointment.",
+     "fields": [
+      {
+       "name": "id",
+       "type": "string",
+       "primary_key": true,
+       "nullable": false
+      },
+      {
+       "name": "appointment_id",
+       "type": "string",
+       "primary_key": false,
+       "nullable": false
+      },
+      {
+       "name": "medication_instructions",
+       "type": "string",
+       "primary_key": false,
+       "nullable": false
+      }
+     ],
+     "relations": [
+      {
+       "target_ref": "E3",
+       "kind": "many_to_one"
+      }
+     ]
+    },
+    {
+     "ref": "E6",
+     "name": "AuditLog",
+     "description": "Records all access events to confidential patient records.",
+     "fields": [
+      {
+       "name": "id",
+       "type": "string",
+       "primary_key": true,
+       "nullable": false
+      },
+      {
+       "name": "user_id",
+       "type": "string",
+       "primary_key": false,
+       "nullable": false
+      },
+      {
+       "name": "action",
+       "type": "string",
+       "primary_key": false,
+       "nullable": false
+      },
+      {
+       "name": "timestamp",
+       "type": "string",
+       "primary_key": false,
+       "nullable": false
+      }
+     ],
+     "relations": []
+    }
+   ],
+   "apis": [
+    {
+     "ref": "A1",
+     "method": "POST",
+     "path": "/patients",
+     "summary": "Register a new patient",
+     "module_ref": "M1",
+     "entity_refs": [
+      "E1"
+     ]
+    },
+    {
+     "ref": "A2",
+     "method": "GET",
+     "path": "/patients/{id}",
+     "summary": "Get patient profile",
+     "module_ref": "M1",
+     "entity_refs": [
+      "E1"
+     ]
+    },
+    {
+     "ref": "A3",
+     "method": "PUT",
+     "path": "/patients/{id}",
+     "summary": "Update patient profile",
+     "module_ref": "M1",
+     "entity_refs": [
+      "E1"
+     ]
+    },
+    {
+     "ref": "A4",
+     "method": "DELETE",
+     "path": "/patients/{id}",
+     "summary": "Delete patient profile",
+     "module_ref": "M1",
+     "entity_refs": [
+      "E1"
+     ]
+    },
+    {
+     "ref": "A5",
+     "method": "POST",
+     "path": "/doctors",
+     "summary": "Create doctor profile and schedule",
+     "module_ref": "M2",
+     "entity_refs": [
+      "E2"
+     ]
+    },
+    {
+     "ref": "A6",
+     "method": "GET",
+     "path": "/doctors",
+     "summary": "Search doctors by speciality",
+     "module_ref": "M2",
+     "entity_refs": [
+      "E2"
+     ]
+    },
+    {
+     "ref": "A7",
+     "method": "POST",
+     "path": "/appointments",
+     "summary": "Book an appointment slot",
+     "module_ref": "M3",
+     "entity_refs": [
+      "E3",
+      "E1",
+      "E2"
+     ]
+    },
+    {
+     "ref": "A8",
+     "method": "PATCH",
+     "path": "/appointments/{id}",
+     "summary": "Reschedule an appointment",
+     "module_ref": "M3",
+     "entity_refs": [
+      "E3"
+     ]
+    },
+    {
+     "ref": "A9",
+     "method": "DELETE",
+     "path": "/appointments/{id}",
+     "summary": "Cancel an appointment",
+     "module_ref": "M3",
+     "entity_refs": [
+      "E3"
+     ]
+    },
+    {
+     "ref": "A10",
+     "method": "GET",
+     "path": "/appointments",
+     "summary": "List doctor appointments for the day",
+     "module_ref": "M5",
+     "entity_refs": [
+      "E3"
+     ]
+    },
+    {
+     "ref": "A11",
+     "method": "GET",
+     "path": "/patients/{id}/medical-histories",
+     "summary": "View patient history",
+     "module_ref": "M5",
+     "entity_refs": [
+      "E4",
+      "E1"
+     ]
+    },
+    {
+     "ref": "A12",
+     "method": "POST",
+     "path": "/prescriptions",
+     "summary": "Write e-prescription",
+     "module_ref": "M5",
+     "entity_refs": [
+      "E5",
+      "E3"
+     ]
+    },
+    {
+     "ref": "A13",
+     "method": "POST",
+     "path": "/notifications",
+     "summary": "Send automated SMS and email reminders",
+     "module_ref": "M4",
+     "entity_refs": [
+      "E3",
+      "E1"
+     ]
+    },
+    {
+     "ref": "A14",
+     "method": "POST",
+     "path": "/audit-logs",
+     "summary": "Create audit log entry for record access",
+     "module_ref": "M6",
+     "entity_refs": [
+      "E6"
+     ]
+    }
+   ]
+  },
+  "tests": {
+   "tests": [
+    {
+     "ref": "T1",
+     "title": "Patient registration and doctor search integration",
+     "kind": "integration",
+     "story_refs": [
+      "S1"
+     ],
+     "api_refs": [
+      "A1",
+      "A6"
+     ],
+     "steps": [
+      "Send POST /patients with valid registration payload.",
+      "Verify 201 response and account creation.",
+      "Send GET /doctors?speciality=Cardiology and verify matching results."
+     ]
+    },
+    {
+     "ref": "T2",
+     "title": "Appointment booking and rescheduling workflow",
+     "kind": "e2e",
+     "story_refs": [
+      "S2"
+     ],
+     "api_refs": [
+      "A7",
+      "A8"
+     ],
+     "steps": [
+      "Send POST /appointments to book an open slot.",
+      "Verify appointment confirmation.",
+      "Send PATCH /appointments/{id} to move to a new slot."
+     ]
+    },
+    {
+     "ref": "T3",
+     "title": "Appointment cancellation",
+     "kind": "integration",
+     "story_refs": [
+      "S3"
+     ],
+     "api_refs": [
+      "A9"
+     ],
+     "steps": [
+      "Identify an existing booked appointment.",
+      "Send DELETE /appointments/{id} to cancel.",
+      "Verify status updates to cancelled."
+     ]
+    },
+    {
+     "ref": "T4",
+     "title": "Automated notification reminder delivery",
+     "kind": "integration",
+     "story_refs": [
+      "S4"
+     ],
+     "api_refs": [
+      "A13"
+     ],
+     "steps": [
+      "Trigger reminder job for appointments 24 hours away.",
+      "Send POST /notifications to trigger SMS and email.",
+      "Verify successful delivery logs and retry on simulated failure."
+     ]
+    },
+    {
+     "ref": "T5",
+     "title": "Schedule management and walk-in queue",
+     "kind": "integration",
+     "story_refs": [
+      "S5"
+     ],
+     "api_refs": [
+      "A5"
+     ],
+     "steps": [
+      "Access schedule manager to add doctor leave.",
+      "Verify conflicting slots are blocked.",
+      "Add a walk-in patient to queue and verify position number."
+     ]
+    },
+    {
+     "ref": "T6",
+     "title": "Doctor daily list and patient history viewing",
+     "kind": "integration",
+     "story_refs": [
+      "S6"
+     ],
+     "api_refs": [
+      "A10",
+      "A11"
+     ],
+     "steps": [
+      "Send GET /appointments for today to view patient list.",
+      "Send GET /patients/{id}/medical-histories to view past records.",
+      "Verify chronological ordering of visits and past diagnoses."
+     ]
+    },
+    {
+     "ref": "T7",
+     "title": "E-prescription creation during consultation",
+     "kind": "integration",
+     "story_refs": [
+      "S7"
+     ],
+     "api_refs": [
+      "A12"
+     ],
+     "steps": [
+      "Open active patient consultation session.",
+      "Send POST /prescriptions with drug dosage and instructions.",
+      "Verify e-prescription is successfully stored."
+     ]
+    },
+    {
+     "ref": "T8",
+     "title": "High concurrency doctor search performance",
+     "kind": "performance",
+     "story_refs": [
+      "S8"
+     ],
+     "api_refs": [
+      "A6"
+     ],
+     "steps": [
+      "Simulate high user traffic hitting search endpoint concurrently.",
+      "Send multiple GET /doctors requests simultaneously.",
+      "Verify average response time remains under 500ms."
+     ]
+    },
+    {
+     "ref": "T9",
+     "title": "Medical record audit logging and security",
+     "kind": "security",
+     "story_refs": [
+      "S9"
+     ],
+     "api_refs": [
+      "A11",
+      "A14"
+     ],
+     "steps": [
+      "Access patient medical history without proper clearance to trigger security check.",
+      "Verify access attempt generates an audit log via POST /audit-logs.",
+      "Verify patient health data at rest is fully encrypted."
+     ]
+    },
+    {
+     "ref": "T10",
+     "title": "System availability and failover resiliency",
+     "kind": "e2e",
+     "story_refs": [
+      "S10"
+     ],
+     "api_refs": [
+      "A7"
+     ],
+     "steps": [
+      "Simulate primary database server crash during peak booking hours.",
+      "Trigger high-availability redundancy failover.",
+      "Verify active booking requests succeed without violating uptime SLA."
+     ]
+    },
+    {
+     "ref": "T11",
+     "title": "Invalid appointment booking negative test",
+     "kind": "integration",
+     "story_refs": [
+      "S2"
+     ],
+     "api_refs": [
+      "A7"
+     ],
+     "steps": [
+      "Attempt to send POST /appointments for an already booked or non-existent slot ID.",
+      "Verify 400 Bad Request error response is returned.",
+      "Ensure no duplicate appointment is created."
+     ]
+    }
+   ]
+  }
+ }
+}
