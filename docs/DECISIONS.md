@@ -115,3 +115,33 @@ All model pages were verified on Hugging Face on 2026-11-26. The exact spaCy mod
 
 ## ADR-021 — Provider error taxonomy and circuit breaker
 **Decision.** Adapters raise `ProviderUnavailable` (429/5xx/timeout → move to the next provider and open a Redis circuit for `max(Retry-After, 60 s)`), `ProviderBadOutput` (bad JSON/schema → repair) or `ProviderConfigError` (400/401/403 → skip). Gemini puts its wait time in the error body (`google.rpc.RetryInfo.retryDelay`) and the adapter reads it. A short wait (≤ 20 s) is slept through once before falling over. This was seen live: while I generated the 4 samples, Gemini hit its per-minute quota, the breaker opened, and Groq took over.
+
+## ADR-022 — Contradictions = NLI proposes, polarity cue confirms
+**Status:** Accepted · 2026-11-26 (Phase 4)
+**Context.** I probed `cross-encoder/nli-deberta-v3-xsmall` before using it. It scored *"Patients can **book** appointments"* vs *"Patients can **cancel** appointments"* at **0.99 contradiction**: to an SNLI-trained model, two different events in one scene contradict. Raw NLI would flag every pair of sibling requirements.
+**Decision.** Report a pair only if (1) it's on-topic (embedding cosine ≥ 0.45), (2) NLI P(contradiction) ≥ 0.80 in either direction, and (3) a **polarity cue** differs: a negation in exactly one statement, an antonym-prefix pair (`encrypted`/`unencrypted`), or conflicting numbers for the same unit (`300 ms` vs `2000 ms`). The cue filter also runs *before* NLI, so most pairs never reach the model. The issue is worded as "**may** contradict" and carries the NLI score and cue, so the user can judge it. False positives can be **dismissed**, and dismissals persist across re-verification via an issue fingerprint (`rule_code:sorted(node_ids)`).
+**Evidence.** `tests/test_ml.py::test_book_vs_cancel_is_not_reported_although_nli_alone_says_contradiction`. On the 4 curated samples: 1 flag (college ERP, "upload/publish marks" vs "published marks never editable"), which is a legitimate question to raise.
+**Rejected.** LLM-as-judge (not deterministic, costs quota). A larger NLI model (memory, and the same SNLI bias).
+
+## ADR-023 — Duplicates via a pgvector self-join; HNSW for "similar nodes"
+**Decision.** Embeddings are stored in `nodes.embedding vector(384)`. Duplicate search is one SQL self-join (`1 - (a.embedding <=> b.embedding)`) restricted to the same blueprint and node type: ≥ 0.90 → `DUP-001`, 0.80–0.90 → `DUP-002`. Tests are excluded, because test scenarios are legitimately similar. `GET /nodes/{id}/similar` uses `ORDER BY embedding <=> :vec LIMIT k`, which is served by the HNSW index. Only nodes with a NULL embedding (new or edited) are re-embedded, so repeat verification is cheap.
+**Measured.** Paraphrase cosine 0.88 vs unrelated 0.06. On the 4 samples: 0 duplicate false positives at 0.80. ML verification takes ~0.3 s per 60-node blueprint once the models are loaded.
+
+## ADR-024 — Fixes: deterministic where possible, LLM where language is needed
+**Decision.** `app/services/fixes.py` maps each rule code to a fixer, and every fix runs in one transaction followed by a full re-verification (`score_before → score_after`).
+- **Deterministic** (no quota): merge duplicates (re-point links, drop the duplicate ones), link orphans / APIs / modules to the *most similar* candidate by embedding (or by path-to-entity name match), add missing CRUD endpoints, normalise REST paths and entity names.
+- **Generative** (small LLM call through the same fallback chain, with a template fallback): stories + tests for a requirement, tests for a story, Given/When/Then criteria, a missing NFR, risk mitigations.
+- **Contradictions** require an LLM or a human. In demo mode the job fails with `FIX_NOT_POSSIBLE` and a clear message rather than inventing a resolution.
+
+Mutating jobs (generate, fix, regenerate) are serialised per blueprint (`409 JOB_IN_PROGRESS`). Verify jobs can run alongside them.
+
+## ADR-025 — Change impact is pruned semantically at module → API edges
+**Context.** Live run on a 65-node blueprint: editing one requirement marked **45 nodes** stale, because the walk crossed story → module → *every* API the module exposes.
+**Decision.** In the recursive CTE, a `module -exposes-> api` edge is followed only if the API's embedding has cosine ≥ 0.40 with the edited node's embedding. If either embedding is missing, the walk falls back to conservative (follow everything). Impact uses the *pre-edit* embedding, because the API process doesn't load ML models and an edit rarely changes a node's topic. Same edit after the change: **25 nodes**.
+**Regenerate subgraph** sends the edited node plus its stale downstream nodes to the LLM and applies the updates by key. IDs, links and kanban status are preserved. In demo mode the nodes are marked reviewed.
+
+## ADR-026 — /ready reports the worker but doesn't gate on it
+**Decision.** Workers write a heartbeat (`{models_loaded, ts}`, 30 s TTL) to Redis every 10 s. `/ready` returns 503 only for DB/Redis failures, and *reports* worker and model state. If ML models aren't loaded yet, jobs simply wait in the queue. An API pod shouldn't leave the load balancer because a worker restarted. `/status` shows the same data for humans.
+
+## ADR-027 — Report timestamps use clock_timestamp()
+`now()` in Postgres is the *transaction* start time, so two reports written in one transaction tied and "latest report" was ambiguous. A test caught it. `quality_reports.created_at` now defaults to `clock_timestamp()` and is indexed (migration 0003).

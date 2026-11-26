@@ -58,6 +58,7 @@ class Settings(BaseSettings):
     generate_limit_per_ip_hour: int = 6
     generate_limit_global_day: int = 300
     demo_login_limit_per_ip_hour: int = 30
+    verify_limit_per_ip_hour: int = 60
 
     # --- Celery ----------------------------------------------------------------
     celery_task_soft_limit: int = 240

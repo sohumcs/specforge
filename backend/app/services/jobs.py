@@ -28,6 +28,7 @@ from app.models.enums import JobKind, JobStatus
 log = logging.getLogger("specforge.jobs")
 
 ACTIVE = (JobStatus.queued, JobStatus.running)
+MUTATING = (JobKind.generate, JobKind.fix_issue, JobKind.regenerate_subgraph)
 TERMINAL = (JobStatus.succeeded, JobStatus.failed, JobStatus.dead)
 CHANNEL = "specforge:jobs:{}"
 DLQ_KEY = "specforge:dlq"
@@ -42,8 +43,16 @@ def redis_client() -> "redis.Redis":
 
 
 def find_existing(
-    db: Session, blueprint: Blueprint, kind: JobKind, idempotency_key: str | None
+    db: Session,
+    blueprint: Blueprint,
+    kind: JobKind,
+    idempotency_key: str | None,
+    params: dict[str, Any] | None = None,
 ) -> Job | None:
+    """Return the job this request should reuse, or None to start a new one.
+
+    Graph-mutating jobs (generate, fix, regenerate) are serialised per blueprint:
+    an active one with the same params is reused, a different one is a 409."""
     if idempotency_key:
         job = db.scalar(select(Job).where(Job.idempotency_key == idempotency_key))
         if job is not None:
@@ -53,11 +62,20 @@ def find_existing(
                     code="IDEMPOTENCY_KEY_REUSED",
                 )
             return job
-    return db.scalar(
+    active = db.scalars(
         select(Job)
-        .where(Job.blueprint_id == blueprint.id, Job.kind == kind, Job.status.in_(ACTIVE))
+        .where(Job.blueprint_id == blueprint.id, Job.status.in_(ACTIVE))
         .order_by(Job.created_at.desc())
-    )
+    ).all()
+    for job in active:
+        if job.kind == kind and (params is None or job.params == params):
+            return job
+    if kind != JobKind.verify and any(j.kind in MUTATING for j in active):
+        raise Conflict(
+            "Another change to this blueprint is in progress; try again shortly",
+            code="JOB_IN_PROGRESS",
+        )
+    return None
 
 
 def create_job(

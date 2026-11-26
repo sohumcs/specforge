@@ -13,6 +13,7 @@ spaCy / sentence-transformer / NLI models (hundreds of MB), which matters on a
 12 GB free VM. Inference releases the GIL, so threads still overlap.
 """
 
+import contextlib
 import logging
 
 from celery import Celery
@@ -50,10 +51,45 @@ def _warm_up(**_: object) -> None:
     from prometheus_client import start_http_server
 
     from app.nlp.brief import get_nlp
+    from app.verify import ml
 
     get_nlp()
+    try:
+        ml.warm_up()
+    except Exception:  # verification degrades to rules-only; never block the worker
+        log.exception("ML models failed to load")
     try:
         start_http_server(9100)
     except OSError:
         log.warning("metrics port 9100 busy; worker metrics disabled")
-    log.info("worker warmed up (spaCy loaded)")
+    _start_heartbeat()
+    log.info("worker warmed up (spaCy + ML models: %s)", ml.models_loaded())
+
+
+HEARTBEAT_KEY = "specforge:worker:heartbeat"
+
+
+def _start_heartbeat() -> None:
+    """Every 10 s write {models_loaded, ts} with a 30 s TTL. The API reads it for
+    /ready and /status: no key means no live worker."""
+    import json
+    import threading
+    import time
+
+    import redis
+
+    from app.verify import ml
+
+    client = redis.Redis.from_url(s.redis_url, socket_timeout=2, socket_connect_timeout=2)
+
+    def beat() -> None:
+        while True:
+            with contextlib.suppress(redis.RedisError):
+                client.set(
+                    HEARTBEAT_KEY,
+                    json.dumps({"models_loaded": ml.models_loaded(), "ts": time.time()}),
+                    ex=30,
+                )
+            time.sleep(10)
+
+    threading.Thread(target=beat, name="heartbeat", daemon=True).start()

@@ -6,7 +6,9 @@
 /status  - human-facing component health + version, for the /status page.
 """
 
+import json
 import logging
+import time
 from typing import Any
 
 import redis
@@ -17,6 +19,7 @@ from sqlalchemy import text
 from app.core.config import get_settings
 from app.db.session import get_engine
 from app.llm.breaker import RedisBreaker
+from app.worker.celery_app import HEARTBEAT_KEY
 
 router = APIRouter(tags=["health"])
 log = logging.getLogger("specforge.health")
@@ -49,18 +52,45 @@ def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
+def check_worker() -> dict[str, Any]:
+    """Live worker + ML models, from the heartbeat the worker writes to Redis."""
+    try:
+        client = redis.Redis.from_url(
+            get_settings().redis_url, socket_timeout=1, socket_connect_timeout=1
+        )
+        raw = client.get(HEARTBEAT_KEY)
+    except Exception:
+        return {"ok": False, "models_loaded": False, "error": "redis unreachable"}
+    if not raw:
+        return {"ok": False, "models_loaded": False, "error": "no live worker"}
+    beat = json.loads(raw)
+    return {
+        "ok": True,
+        "models_loaded": bool(beat.get("models_loaded")),
+        "last_seen_seconds": round(time.time() - float(beat.get("ts", 0)), 1),
+    }
+
+
 @router.get("/ready")
 def ready() -> JSONResponse:
+    """Gates traffic on DB + Redis only. Worker/model state is reported but does
+    not gate: jobs simply queue until a worker with loaded models picks them up,
+    and an API pod shouldn't drop out of the load balancer because a worker restarts."""
     checks = {"database": check_db(), "redis": check_redis()}
     ok = all(c["ok"] for c in checks.values())
-    body = {"status": "ready" if ok else "not_ready", "checks": checks}
+    body = {"status": "ready" if ok else "not_ready", "checks": checks, "worker": check_worker()}
     return JSONResponse(body, status_code=200 if ok else 503)
 
 
 @router.get("/api/v1/status")
 def status() -> dict[str, Any]:
     s = get_settings()
-    components = {"api": {"ok": True}, "database": check_db(), "redis": check_redis()}
+    components = {
+        "api": {"ok": True},
+        "database": check_db(),
+        "redis": check_redis(),
+        "worker": check_worker(),
+    }
     breaker = RedisBreaker()
     providers = {
         name: {

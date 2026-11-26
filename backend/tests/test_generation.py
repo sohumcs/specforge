@@ -153,7 +153,7 @@ def test_task_unexpected_error_marks_failed_without_leaking(task_db, job, monkey
     tasks.generate_blueprint.apply(args=[str(job.id)])
     task_db.refresh(job)
     task_db.refresh(bp)
-    assert job.status == JobStatus.failed and job.error["code"] == "GENERATION_FAILED"
+    assert job.status == JobStatus.failed and job.error["code"] == "JOB_FAILED"
     assert "secret" not in json.dumps(job.error)
     assert bp.status == BlueprintStatus.failed
 

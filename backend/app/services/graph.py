@@ -10,6 +10,7 @@ Two edge types point the other way relative to impact:
 * risk -threatens-> requirement: changing the requirement affects the risk.
 * module A -depends_on-> module B: changing B affects A.
 For these we walk the edge backwards (dst -> src) when computing impact.
+module -exposes-> api is pruned semantically: see IMPACT_API_MIN_SIMILARITY.
 `relates_to` (entity <-> entity) is not followed, or one schema tweak would
 mark half the blueprint stale.
 """
@@ -42,6 +43,11 @@ IMPACT_FORWARD = [
     EdgeType.verified_by,
 ]
 IMPACT_REVERSE = [EdgeType.threatens, EdgeType.depends_on]
+# module -> api edges are only followed for APIs at least this similar to the
+# edited node (see _WALK_SQL). Measured on a 65-node blueprint: editing one
+# requirement went from 45 impacted nodes (everything behind its modules) to
+# only the related slice.
+IMPACT_API_MIN_SIMILARITY = 0.40
 
 
 @dataclass(frozen=True)
@@ -56,9 +62,19 @@ class Reached:
 _WALK_SQL = text(
     """
     WITH RECURSIVE
+    root_vec AS (SELECT embedding FROM nodes WHERE id = CAST(:root AS uuid)),
     directed(src, dst) AS (
-        SELECT e.src_id, e.dst_id FROM edges e
+        SELECT e.src_id, e.dst_id
+        FROM edges e
+        JOIN nodes dst ON dst.id = e.dst_id
+        CROSS JOIN root_vec r
         WHERE e.blueprint_id = :bp AND e.type::text = ANY(:fwd)
+          -- Semantic pruning: a module exposes many APIs, but a change only
+          -- affects the ones related to what changed. Follow module -> api only
+          -- if the API is similar to the edited node (when both are embedded).
+          AND (NOT :prune OR e.type <> 'exposes' OR r.embedding IS NULL
+               OR dst.embedding IS NULL
+               OR 1 - (dst.embedding <=> r.embedding) >= :min_sim)
         UNION ALL
         SELECT e.dst_id, e.src_id FROM edges e
         WHERE e.blueprint_id = :bp AND e.type::text = ANY(:rev)
@@ -86,6 +102,8 @@ def _walk(
     root_id: uuid.UUID,
     forward: list[EdgeType],
     reverse: list[EdgeType],
+    *,
+    prune: bool = False,
 ) -> list[Reached]:
     rows = db.execute(
         _WALK_SQL,
@@ -95,6 +113,8 @@ def _walk(
             "fwd": [e.value for e in forward],
             "rev": [e.value for e in reverse],
             "max_depth": get_settings().max_graph_depth,
+            "prune": prune,
+            "min_sim": IMPACT_API_MIN_SIMILARITY,
         },
     ).all()
     return [Reached(node_id=r.node_id, depth=r.depth) for r in rows]
@@ -102,7 +122,7 @@ def _walk(
 
 def downstream_impact(db: Session, node: Node) -> list[Reached]:
     """Everything that may need rework if `node` changes."""
-    return _walk(db, node.blueprint_id, node.id, IMPACT_FORWARD, IMPACT_REVERSE)
+    return _walk(db, node.blueprint_id, node.id, IMPACT_FORWARD, IMPACT_REVERSE, prune=True)
 
 
 def upstream_trace(db: Session, node: Node) -> list[Reached]:
@@ -156,6 +176,7 @@ def create_node(
     title: str,
     body: dict[str, Any],
     key: str | None = None,
+    commit: bool = True,
 ) -> Node:
     key = key or next_key(db, blueprint.id, node_type)
     if db.scalar(select(Node.id).where(Node.blueprint_id == blueprint.id, Node.key == key)):
@@ -174,7 +195,10 @@ def create_node(
         position=position or 1,
     )
     db.add(node)
-    db.commit()
+    if commit:
+        db.commit()
+    else:
+        db.flush()
     return node
 
 
@@ -200,8 +224,11 @@ def update_node(
         db.commit()
         return []
 
-    node.embedding = None  # content changed -> embedding must be recomputed
+    # Impact is computed with the PRE-edit embedding (the API process doesn't load
+    # ML models; an edit rarely changes a node's topic), then the embedding is
+    # cleared so the next verification re-embeds the new text.
     reached = downstream_impact(db, node)
+    node.embedding = None
     impacted_ids = [r.node_id for r in reached]
     if impacted_ids:
         for n in db.scalars(select(Node).where(Node.id.in_(impacted_ids))):
@@ -260,6 +287,7 @@ def create_edge(
     dst_id: uuid.UUID,
     edge_type: EdgeType,
     body: dict[str, Any],
+    commit: bool = True,
 ) -> Edge:
     src, dst = db.get(Node, src_id), db.get(Node, dst_id)
     if src is None or dst is None or src.blueprint_id != blueprint.id:
@@ -272,7 +300,10 @@ def create_edge(
         raise Conflict("This edge already exists", code="DUPLICATE_EDGE")
     edge = Edge(blueprint_id=blueprint.id, src_id=src_id, dst_id=dst_id, type=edge_type, body=body)
     db.add(edge)
-    db.commit()
+    if commit:
+        db.commit()
+    else:
+        db.flush()
     return edge
 
 

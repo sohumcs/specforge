@@ -68,7 +68,7 @@ sequenceDiagram
     API-->>UI: event: done {score, provider}
 ```
 
-**Steps reported to the UI:** `parsing → generating_requirements → generating_design → generating_tests → saving → (Phase 4: rule_check → ml_check → scoring) → done`.
+**Steps reported to the UI:** `parsing → generating_requirements → generating_design → generating_tests → saving → rule_check → ml_check → scoring → done`.
 
 Generation is **staged** (ADR-017): three LLM calls with three small schemas, so each fits Groq's 8K tokens/minute free limit, and each can be repaired or re-run on its own.
 
@@ -104,16 +104,19 @@ older prompt) → DemoProvider for the whole blueprint
 | CV-001 | Conventions | Endpoints: kebab-case plural nouns, verb matches semantics (no `GET /createUser`) |
 | CV-002 | Conventions | Entities: PascalCase singular; columns snake_case; each entity has a PK |
 | CV-003 | Conventions | Node keys unique and well-formed (`REQ-001`, `US-001`, …) |
+| TR-005 | Traceability | Every module implements ≥1 story |
+
+(Implemented in `backend/app/verify/rules.py`: pure functions over a `GraphView` snapshot. CP-001 also flags criteria not in Given/When/Then form at low severity.)
 
 **ML layer:**
 - *Duplicates:* `all-MiniLM-L6-v2` (384-d) embeddings stored in `nodes.embedding vector(384)` with an HNSW index. Pairs of same-type nodes with cosine ≥ 0.90 → `DUP-001 duplicate`, 0.80–0.90 → `DUP-002 near-duplicate`. Query uses pgvector `<=>` within the blueprint.
-- *Contradictions:* `cross-encoder/nli-deberta-v3-xsmall` (labels: contradiction, entailment, neutral). Only requirement pairs with cosine ≥ 0.45 (same topic) are sent to NLI, both directions; `max(P(contradiction))` ≥ 0.80 → `CON-001`. This prunes O(n²) to a handful of pairs.
+- *Contradictions:* `cross-encoder/nli-deberta-v3-xsmall`. Hybrid (ADR-022): requirement pairs need cosine ≥ 0.45 **and** a polarity cue (negation in one only, antonym prefix, conflicting quantities) before NLI runs in both directions; max P(contradiction) ≥ 0.80 → `CON-001` ("may contradict", dismissible).
 
 **Quality Score (0–100):** weighted category scores.
 
 | Category | Weight | Category score |
 |---|---|---|
-| Traceability | 35 | `100 × (1 − violations / checks)` |
+| Traceability | 35 | `100 × (1 − Σ severity_weight / checks)`; weights high 1.0, medium 0.6, low 0.3 |
 | Completeness | 25 | same |
 | Consistency (contradictions) | 20 | `100 − 25 × contradictions`, floor 0 |
 | Uniqueness (duplicates) | 10 | `100 − 15 × dup − 5 × near-dup`, floor 0 |
@@ -122,6 +125,8 @@ older prompt) → DemoProvider for the whole blueprint
 Every issue stores the offending `node_ids`, a human explanation and a `fix_hint`; "Fix with AI" enqueues `fix_issue(issue_id)`, which regenerates only those nodes and re-verifies.
 
 ### 2.3 Change-impact propagation
+
+> Semantic pruning (ADR-025): `module → api` edges are followed only for APIs whose embedding is ≥ 0.40 cosine-similar to the edited node.
 Editing a node (`PATCH /nodes/{id}`) runs a **recursive CTE** over `edges` in the downstream direction (requirement → story → module → API → entity, and test/risk edges that point at any of those), with a visited-set guard against cycles and a depth cap. Results:
 1. Affected nodes are marked `stale = true` in the same transaction as the edit, and a `change_event` row records before/after + impacted IDs.
 2. The response returns the impacted nodes **grouped by hop distance**, which the UI uses to animate the propagation wave.

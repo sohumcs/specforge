@@ -10,6 +10,12 @@ from app.models import RefreshToken
 REFRESH = "/api/v1/auth/refresh"
 
 
+def replace_refresh_cookie(client, value):
+    """Swap the refresh cookie (not add a second one beside the server's)."""
+    client.cookies.clear()
+    client.cookies.set("sf_refresh", value, domain="testserver.local", path="/api/v1/auth")
+
+
 def test_register_login_me(client, api):
     r = api(
         "post",
@@ -91,12 +97,12 @@ def test_refresh_rotates_and_reuse_revokes_family(client, make_user, login, db):
     assert second and second != first
 
     # Replay the old (now revoked) token -> reuse detected, family revoked.
-    client.cookies.set("sf_refresh", first, path="/api/v1/auth")
+    replace_refresh_cookie(client, first)
     r2 = client.post(REFRESH)
     assert r2.status_code == 401 and r2.json()["code"] == "REFRESH_REUSED"
 
     # The legitimately rotated token is now dead too.
-    client.cookies.set("sf_refresh", second, path="/api/v1/auth")
+    replace_refresh_cookie(client, second)
     r3 = client.post(REFRESH)
     assert r3.status_code == 401
     tokens = db.scalars(select(RefreshToken).where(RefreshToken.user_id == user.id)).all()
@@ -123,7 +129,7 @@ def test_logout_revokes_refresh(client, make_user, login):
     login(make_user())
     raw = client.cookies.get("sf_refresh")
     assert client.post("/api/v1/auth/logout").status_code == 204
-    client.cookies.set("sf_refresh", raw, path="/api/v1/auth")
+    replace_refresh_cookie(client, raw)
     assert client.post(REFRESH).status_code == 401
 
 

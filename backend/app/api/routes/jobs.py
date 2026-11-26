@@ -44,9 +44,9 @@ class JobOut(BaseModel):
 
 
 def get_enqueuer() -> job_service.Enqueue:
-    from app.worker.tasks import enqueue_generation
+    from app.worker.tasks import enqueue
 
-    return enqueue_generation
+    return enqueue
 
 
 def client_ip(request: Request) -> str:
@@ -73,21 +73,41 @@ def generate(
     idempotency_key: Annotated[str | None, Header(max_length=100)] = None,
 ) -> Any:
     bp = authorize_blueprint(db, user, blueprint_id, Role.editor)
-    existing = job_service.find_existing(db, bp, JobKind.generate, idempotency_key)
+    return submit_job(
+        db,
+        user,
+        request,
+        bp,
+        JobKind.generate,
+        {"force": bool(body and body.force)},
+        idempotency_key,
+        enqueue,
+    )
+
+
+def submit_job(
+    db: DB,
+    user: CurrentUser,
+    request: Request,
+    bp: Any,
+    kind: JobKind,
+    params: dict[str, Any],
+    idempotency_key: str | None,
+    enqueue: job_service.Enqueue,
+) -> Any:
+    """Shared submission path: idempotency -> rate limit -> create + enqueue.
+    Returns 200 with an existing job, or 202 with a new one."""
+    existing = job_service.find_existing(db, bp, kind, idempotency_key, params)
     if existing is not None:
         return JSONResponse(job_service.job_event(existing), status_code=200)
-    ratelimit.check(
-        ratelimit.generation_limits(str(user.id), user.is_demo, client_ip(request)),
-        action="generate",
-    )
+    ip = client_ip(request)
+    if kind == JobKind.verify:  # CPU only, no LLM quota: a looser per-IP limit
+        limits = [ratelimit.Limit("ip", ip, get_settings().verify_limit_per_ip_hour, 3600)]
+    else:
+        limits = ratelimit.generation_limits(str(user.id), user.is_demo, ip)
+    ratelimit.check(limits, action="verify" if kind == JobKind.verify else "llm")
     job = job_service.create_job(
-        db,
-        bp,
-        user,
-        JobKind.generate,
-        idempotency_key=idempotency_key,
-        params={"force": bool(body and body.force)},
-        enqueue=enqueue,
+        db, bp, user, kind, idempotency_key=idempotency_key, params=params, enqueue=enqueue
     )
     return job_service.job_event(job)
 

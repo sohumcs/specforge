@@ -205,8 +205,13 @@ class QualityReport(Base):
     )
     score: Mapped[int] = mapped_column(Integer, nullable=False)
     breakdown: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    # clock_timestamp(), not now(): now() is the transaction start, so two
+    # reports written in one transaction would tie and "latest" would be ambiguous.
     created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), server_default=func.now(), nullable=False
+        DateTime(timezone=True),
+        server_default=func.clock_timestamp(),
+        nullable=False,
+        index=True,
     )
 
     issues: Mapped[list["Issue"]] = relationship(

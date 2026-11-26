@@ -286,3 +286,45 @@ def test_http_delete_node_cascades_edges(api, owner_bp):
     g = api("get", f"/blueprints/{bp}/graph", h).json()
     assert len(g["nodes"]) == 1 and g["edges"] == []
     assert api("get", f"/nodes/{a['id']}", h).status_code == 404
+
+
+def _unit(i: int) -> list[float]:
+    v = [0.0] * 384
+    v[i] = 1.0
+    return v
+
+
+def test_impact_prunes_unrelated_apis_behind_a_module(db, bp, ids):
+    # REQ1 and API1 point the same way; a second API on MOD1 is unrelated.
+    other_api = graph.create_node(
+        db,
+        bp,
+        node_type=NodeType.api,
+        title="GET /reports",
+        body={"method": "GET", "path": "/reports"},
+    )
+    graph.create_edge(
+        db, bp, src_id=ids["MOD1"], dst_id=other_api.id, edge_type=EdgeType.exposes, body={}
+    )
+    req = db.get(Node, ids["REQ1"])
+    before = {r.node_id for r in graph.downstream_impact(db, req)}
+    assert other_api.id in before  # no embeddings yet: conservative, follow everything
+
+    req.embedding = _unit(0)
+    db.get(Node, ids["API1"]).embedding = [0.8, 0.6] + [0.0] * 382  # cos 0.8 with REQ1
+    other_api.embedding = _unit(5)  # cos 0 with REQ1
+    db.commit()
+    after = {r.node_id for r in graph.downstream_impact(db, req)}
+    assert ids["API1"] in after and ids["ENT1"] in after
+    assert other_api.id not in after
+    # upstream trace is never pruned
+    up = {r.node_id for r in graph.upstream_trace(db, other_api)}
+    assert ids["MOD1"] in up
+
+
+def test_edit_uses_pre_edit_embedding_then_clears_it(db, ids):
+    req = db.get(Node, ids["REQ1"])
+    req.embedding = _unit(0)
+    db.commit()
+    graph.update_node(db, req, user_id=None, title="Customers order food and drinks", body=None)
+    assert req.embedding is None
