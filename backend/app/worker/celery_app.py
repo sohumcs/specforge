@@ -17,6 +17,7 @@ import contextlib
 import logging
 
 from celery import Celery
+from celery.schedules import crontab
 from celery.signals import worker_init
 
 from app.core.config import get_settings
@@ -38,7 +39,13 @@ celery_app.conf.update(
     broker_connection_timeout=3,
     broker_transport_options={"visibility_timeout": s.celery_task_hard_limit * 2},
     task_always_eager=s.celery_eager,
-    beat_schedule={},  # populated in Phase 6 (nightly sandbox reset)
+    beat_schedule={
+        "reset-sandbox-nightly": {
+            "task": "specforge.reset_sandbox",
+            "schedule": crontab(hour=3, minute=0),  # 03:00 UTC
+        },
+    },
+    timezone="UTC",
 )
 
 

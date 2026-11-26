@@ -9,8 +9,9 @@ Resume a session by reading this file + `../Web/new-portfolio/SPECFORGE_BUILD_PR
 | 2. Backend core | ✅ done 2026-11-26: 122 tests green, 94 % coverage, ruff/mypy-strict/bandit clean |
 | 3. AI pipeline | ✅ done 2026-11-26: 190 tests green, 95 % coverage, live E2E proven |
 | 4. Verification engine | ✅ done 2026-11-26: 269 tests green, 94 % coverage, live E2E smoke passes |
-| 5. Frontend | ⏳ next |
-| 6–10 | not started |
+| 5. Frontend | ✅ done 2026-11-26: verified in a real browser; 28 Vitest + 280 pytest tests |
+| 6. Local full stack | ⏳ next |
+| 7–10 | not started |
 
 ## Decisions made by Sohum
 - Repo `sohumcs/specforge` is **public**.
@@ -58,6 +59,20 @@ cd backend && python -m venv .venv && .venv/Scripts/pip install -e ".[dev]" && .
 - Migration `0003`: report timestamps use `clock_timestamp()`.
 - `scripts/e2e_smoke.py`: live smoke (demo → generate → quality → fix → edit → impact → regenerate → similar). Passed against a real API + worker + Gemini/Groq.
 
+## Phase 5 — what exists
+- Backend additions: `GET /blueprints/{id}/progress` (roll-ups), `GET /blueprints/{id}/export?format=md|json|pdf` (ReportLab PDF), `GET /samples`, `POST /projects/{id}/samples/{slug}`, regenerate without a root (uses the latest edit), `python -m app.seed` + nightly `specforge.reset_sandbox` beat task, demo login self-heals an empty sandbox.
+- `frontend/`: landing (animated walkthrough, architecture SVG, samples, demo CTA), login/register, status page, projects, project page with generate + live progress, blueprint workspace (graph, node panel, impact wave, regenerate, quality panel, kanban + roll-ups, outline, exports). Responsive (checked at 375 px) and accessible (jsx-a11y lint, keyboard paths).
+- Checked in a real browser against the real API + worker: demo login → sample graph → select/trace → edit REQ-006 → 4 nodes stale + amber wave → regenerate (LLM) → contradiction resolved, score 92 → 98 → Fix with AI (CRUD) → kanban drag → status page → new brief generated end-to-end (Groq answered after Gemini's per-minute quota).
+- Tests: backend 280 (pytest, 94 % coverage), frontend 28 (Vitest + Testing Library); eslint, tsc, ruff, mypy, bandit clean.
+
+## Run the UI locally
+```
+cd backend && .venv/Scripts/uvicorn app.main:app --port 8000
+cd backend && .venv/Scripts/celery -A app.worker.celery_app worker -P threads -c 2
+cd frontend && npm install && npm run dev        # http://localhost:5173
+cd backend && .venv/Scripts/python -m app.seed   # (re)create the demo sandbox
+```
+
 ## Run locally (Windows, Git Bash)
 ```
 cd backend
@@ -80,5 +95,5 @@ Torch comes from the CPU index: `pip install torch --index-url https://download.
 | Phase 8 | Oracle Cloud Free Tier account + API signing key; DuckDNS (sign in with GitHub) + token; UptimeRobot free account |
 | Phase 9 | Confirm the AWS student account type; sign in and generate credentials when we get there |
 
-## Next: Phase 5 (frontend)
-React + TS (Vite), Tailwind, React Flow graph (filter/colour/trace/zoom), TanStack Query, fetch-based SSE job progress, Quality panel (gauge, category bars, issues with fix/dismiss), change-impact animation + "regenerate affected", kanban + roll-ups (needs a small `/progress` endpoint), exports MD/JSON/PDF (backend endpoint still to build), landing page, `/status` page, demo login.
+## Next: Phase 6 (local full stack)
+Dockerfiles (api/worker image with CPU torch + baked models, nginx frontend image), docker-compose.yml (postgres+pgvector, redis, migrate, seed, api, worker, beat, web), `make dev` / `scripts/dev.ps1`, Playwright e2e of sign in → generate → verify → edit → impact → export against compose (CI-friendly: `LLM_PROVIDERS=["demo"]`).

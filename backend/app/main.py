@@ -9,7 +9,7 @@ from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from prometheus_client import CONTENT_TYPE_LATEST, Counter, Histogram, generate_latest
 
-from app.api.routes import auth, blueprints, health, jobs, projects, quality
+from app.api.routes import auth, blueprints, delivery, health, jobs, projects, quality
 from app.core.config import get_settings
 from app.core.errors import register_error_handlers
 from app.core.logging import configure_logging, request_id_var
@@ -97,6 +97,7 @@ def create_app() -> FastAPI:
     app.include_router(blueprints.router, prefix=api)
     app.include_router(jobs.router, prefix=api)
     app.include_router(quality.router, prefix=api)
+    app.include_router(delivery.router, prefix=api)
 
     @app.get("/metrics", include_in_schema=False)
     def metrics() -> Response:

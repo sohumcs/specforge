@@ -208,6 +208,17 @@ def test_regenerate_endpoint_validates_root(api, owned, db):
         json={"root_node_id": "00000000-0000-0000-0000-000000000000"},
     )
     assert bad.status_code == 404
+    # no root given and nothing edited yet -> 409; after an edit it uses that node
+    r0 = api("post", f"/blueprints/{bpid}/regenerate-subgraph", h, json={})
+    assert r0.json()["code"] == "NOTHING_TO_REGENERATE"
+    api("patch", f"/nodes/{root.id}", h, json={"title": "Changed requirement title"})
+    from app.models import Job
+    from app.models.enums import JobStatus
+
+    db.query(Job).update({Job.status: JobStatus.succeeded})  # let a new job start
+    db.commit()
+    r2 = api("post", f"/blueprints/{bpid}/regenerate-subgraph", h, json={})
+    assert r2.status_code == 202 and calls[-1].params == {"root_node_id": str(root.id)}
 
 
 def test_rules_catalog_public(client):

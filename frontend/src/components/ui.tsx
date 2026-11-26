@@ -1,0 +1,173 @@
+import clsx from 'clsx'
+import { AlertTriangle, Inbox, Loader2, RotateCw } from 'lucide-react'
+import type { ButtonHTMLAttributes, ReactNode } from 'react'
+
+import { ApiError } from '../lib/api'
+
+type Variant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'spark'
+
+const VARIANTS: Record<Variant, string> = {
+  primary: 'bg-brand-600 text-white hover:bg-brand-700 shadow-sm disabled:bg-brand-600/50',
+  secondary: 'bg-white text-slate-800 border border-slate-300 hover:bg-slate-50 disabled:text-slate-400',
+  ghost: 'text-slate-700 hover:bg-slate-100 disabled:text-slate-400',
+  danger: 'bg-rose-600 text-white hover:bg-rose-700 disabled:bg-rose-600/50',
+  spark: 'bg-amber-400 text-slate-900 hover:bg-amber-300 shadow-sm disabled:bg-amber-400/60',
+}
+
+export function Button({
+  variant = 'primary',
+  size = 'md',
+  loading = false,
+  className,
+  children,
+  disabled,
+  ...rest
+}: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: Variant; size?: 'sm' | 'md' | 'lg'; loading?: boolean }) {
+  return (
+    <button
+      type="button"
+      {...rest}
+      disabled={disabled || loading}
+      aria-busy={loading || undefined}
+      className={clsx(
+        'inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-colors disabled:cursor-not-allowed',
+        size === 'sm' && 'px-2.5 py-1.5 text-sm',
+        size === 'md' && 'px-3.5 py-2 text-sm',
+        size === 'lg' && 'px-5 py-3 text-base',
+        VARIANTS[variant],
+        className,
+      )}
+    >
+      {loading && <Loader2 className="size-4 animate-spin" aria-hidden />}
+      {children}
+    </button>
+  )
+}
+
+export function Card({ className, children }: { className?: string; children: ReactNode }) {
+  return <div className={clsx('rounded-xl border border-slate-200 bg-white shadow-sm', className)}>{children}</div>
+}
+
+export function Spinner({ label = 'Loading' }: { label?: string }) {
+  return (
+    <div role="status" className="flex items-center justify-center gap-2 p-8 text-slate-500">
+      <Loader2 className="size-5 animate-spin" aria-hidden />
+      <span>{label}…</span>
+    </div>
+  )
+}
+
+export function Skeleton({ className }: { className?: string }) {
+  return <div aria-hidden className={clsx('animate-pulse rounded-md bg-slate-200', className)} />
+}
+
+export function errorMessage(err: unknown): string {
+  if (err instanceof ApiError) return err.message
+  if (err instanceof Error) return err.message
+  return 'Something went wrong'
+}
+
+export function ErrorState({ error, onRetry, title = "Couldn't load this" }: { error: unknown; onRetry?: () => void; title?: string }) {
+  return (
+    <div role="alert" className="flex flex-col items-center gap-3 rounded-xl border border-rose-200 bg-rose-50 p-6 text-center">
+      <AlertTriangle className="size-6 text-rose-600" aria-hidden />
+      <div>
+        <p className="font-medium text-rose-900">{title}</p>
+        <p className="mt-1 text-sm text-rose-800">{errorMessage(error)}</p>
+      </div>
+      {onRetry && (
+        <Button variant="secondary" size="sm" onClick={onRetry}>
+          <RotateCw className="size-4" aria-hidden /> Try again
+        </Button>
+      )}
+    </div>
+  )
+}
+
+export function EmptyState({ title, children, action }: { title: string; children?: ReactNode; action?: ReactNode }) {
+  return (
+    <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center">
+      <Inbox className="size-7 text-slate-400" aria-hidden />
+      <p className="font-medium text-slate-800">{title}</p>
+      {children && <div className="max-w-md text-sm text-slate-600">{children}</div>}
+      {action}
+    </div>
+  )
+}
+
+export function Badge({ children, className, title }: { children: ReactNode; className?: string; title?: string }) {
+  return (
+    <span title={title} className={clsx('inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium', className)}>
+      {children}
+    </span>
+  )
+}
+
+const PROVIDER_STYLE: Record<string, string> = {
+  gemini: 'bg-blue-50 text-blue-800 ring-1 ring-blue-200',
+  groq: 'bg-orange-50 text-orange-800 ring-1 ring-orange-200',
+  cache: 'bg-slate-100 text-slate-700 ring-1 ring-slate-200',
+  demo: 'bg-amber-50 text-amber-900 ring-1 ring-amber-200',
+  sample: 'bg-violet-50 text-violet-800 ring-1 ring-violet-200',
+}
+
+/** Which LLM produced this blueprint ("gemini", "gemini+groq", "cache", "demo"...). */
+export function ProviderBadge({ provider }: { provider: string | null }) {
+  if (!provider) return null
+  const key = Object.keys(PROVIDER_STYLE).find((k) => provider.startsWith(k)) ?? 'cache'
+  const explain: Record<string, string> = {
+    demo: 'All free LLM quotas were busy, so the offline generator answered',
+    cache: 'Served from the generation cache (same brief seen before)',
+    sample: 'A curated sample blueprint',
+  }
+  return (
+    <Badge className={PROVIDER_STYLE[key]} title={explain[key] ?? `Generated by ${provider}`}>
+      <span aria-hidden>⚡</span> {provider}
+    </Badge>
+  )
+}
+
+export function ScoreGauge({ score, size = 120 }: { score: number | null; size?: number }) {
+  const r = 46
+  const circ = 2 * Math.PI * r
+  const value = score ?? 0
+  const color = score === null ? '#94a3b8' : value >= 90 ? '#059669' : value >= 75 ? '#d97706' : '#e11d48'
+  return (
+    <figure className="flex flex-col items-center" aria-label={score === null ? 'Not scored yet' : `Quality score ${value} out of 100`}>
+      <svg width={size} height={size} viewBox="0 0 120 120" role="img" aria-hidden>
+        <circle cx="60" cy="60" r={r} fill="none" stroke="#e2e8f0" strokeWidth="10" />
+        <circle
+          cx="60"
+          cy="60"
+          r={r}
+          fill="none"
+          stroke={color}
+          strokeWidth="10"
+          strokeLinecap="round"
+          strokeDasharray={circ}
+          strokeDashoffset={circ * (1 - value / 100)}
+          transform="rotate(-90 60 60)"
+          style={{ transition: 'stroke-dashoffset 0.8s ease' }}
+        />
+        <text x="60" y="66" textAnchor="middle" fontSize="28" fontWeight="700" fill="#0f172a">
+          {score ?? '–'}
+        </text>
+      </svg>
+    </figure>
+  )
+}
+
+export function ProgressBar({ percent, label }: { percent: number; label: string }) {
+  return (
+    <div
+      role="progressbar"
+      aria-label={label}
+      aria-valuenow={percent}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      className="h-2 w-full overflow-hidden rounded-full bg-slate-200"
+    >
+      <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: `${percent}%` }} />
+    </div>
+  )
+}

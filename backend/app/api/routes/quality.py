@@ -11,7 +11,7 @@ from sqlalchemy import select, text
 from app.api.deps import DB, CurrentUser
 from app.api.routes.jobs import get_enqueuer, submit_job
 from app.core.errors import AppError, Conflict, NotFound
-from app.models import Blueprint, Issue, Node, QualityReport
+from app.models import Blueprint, ChangeEvent, Issue, Node, QualityReport
 from app.models.enums import IssueCategory, JobKind, Role
 from app.services import jobs as job_service
 from app.services.access import authorize_blueprint, authorize_node
@@ -227,7 +227,8 @@ def restore_issue(issue_id: uuid.UUID, db: DB, user: CurrentUser) -> Any:
 
 
 class RegenerateIn(BaseModel):
-    root_node_id: uuid.UUID
+    # Omit to use the most recently edited node (from the change log).
+    root_node_id: uuid.UUID | None = None
 
 
 @router.post("/blueprints/{blueprint_id}/regenerate-subgraph", status_code=202)
@@ -241,7 +242,15 @@ def regenerate(
     idempotency_key: IdemKey = None,
 ) -> Any:
     bp = authorize_blueprint(db, user, blueprint_id, Role.editor)
-    root = db.get(Node, body.root_node_id)
+    root_id = body.root_node_id or db.scalar(
+        select(ChangeEvent.node_id)
+        .where(ChangeEvent.blueprint_id == bp.id, ChangeEvent.node_id.is_not(None))
+        .order_by(ChangeEvent.created_at.desc())
+        .limit(1)
+    )
+    if root_id is None:
+        raise Conflict("Nothing has been edited yet", code="NOTHING_TO_REGENERATE")
+    root = db.get(Node, root_id)
     if root is None or root.blueprint_id != bp.id:
         raise NotFound("Node not found in this blueprint")
     return submit_job(

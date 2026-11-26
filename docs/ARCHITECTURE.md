@@ -267,3 +267,18 @@ specforge/
 ├── docs/           ARCHITECTURE, DECISIONS, COSTS, AWS, RUNBOOK, API, RESUME_MAPPING
 ├── docker-compose.yml   Makefile   PROGRESS.md   README.md
 ```
+
+---
+
+## 7. Frontend (`frontend/`)
+
+React 19 + TypeScript (Vite), Tailwind 4, TanStack Query, React Flow v13, dnd-kit.
+
+| Route | What it shows |
+|---|---|
+| `/` | Landing: one-liner, looping animated walkthrough, samples, architecture diagram, stack, GitHub/LinkedIn, **Try it instantly** (demo login → sandbox) |
+| `/status` | Live component health (API, DB, Redis, worker + ML models), LLM providers + circuit state, version/commit/CI link |
+| `/app`, `/app/p/:id` | Projects; blueprints with scores and provider badges; new-blueprint form with live SSE progress |
+| `/app/b/:id?tab=` | Workspace: **Graph** (layered React Flow, filters, colour by type/status/issues, search, trace dimming, node panel with edit → impact wave → regenerate), **Quality** (gauge, weighted breakdown, issues with Fix with AI / Dismiss / Show in graph), **Delivery** (kanban + roll-ups), **Outline** (accessible list), **Brief & export** (MD / PDF / JSON) |
+
+Data flow: `src/lib/api.ts` (fetch + silent refresh) → `src/lib/queries.ts` (TanStack Query hooks, optimistic kanban moves) → pages. Jobs are followed with `src/lib/useJob.ts` (SSE → polling fallback).

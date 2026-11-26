@@ -188,6 +188,18 @@ def regenerate_subgraph_task(self: Task, job_id: str) -> None:
     _run_job(self, job_id, _regenerate, marks_blueprint=False)
 
 
+@celery_app.task(name="specforge.reset_sandbox")
+def reset_sandbox_task() -> dict[str, Any]:
+    """Nightly: wipe visitors' sandbox changes and restore the verified samples."""
+    from app.services.samples import reset_sandbox
+
+    db = session_factory()
+    try:
+        return reset_sandbox(db)
+    finally:
+        db.close()
+
+
 TASKS: dict[JobKind, Task] = {
     JobKind.generate: generate_blueprint,
     JobKind.verify: verify_blueprint,

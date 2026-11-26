@@ -145,3 +145,24 @@ Mutating jobs (generate, fix, regenerate) are serialised per blueprint (`409 JOB
 
 ## ADR-027 — Report timestamps use clock_timestamp()
 `now()` in Postgres is the *transaction* start time, so two reports written in one transaction tied and "latest report" was ambiguous. A test caught it. `quality_reports.created_at` now defaults to `clock_timestamp()` and is indexed (migration 0003).
+
+## ADR-028 — SPA and API share one origin (proxy in dev, nginx in prod)
+**Status:** Accepted · 2026-11-26 (Phase 5)
+**Decision.** The browser only ever talks to one origin. In dev, Vite proxies `/api`, `/health`, `/ready` and `/docs` to FastAPI. In production, the frontend's nginx does the same proxying, behind Traefik. The refresh token is an httpOnly, `SameSite=Strict` cookie scoped to `/api/v1/auth`, and the 15-minute access token lives only in JS memory (never localStorage). On a 401 the client refreshes once, with the refresh shared across concurrent requests (`src/lib/api.ts`), then retries.
+**Why.** There's no CORS preflight on every call, the cookie works without `SameSite=None`, and XSS can't steal a long-lived credential.
+
+## ADR-029 — Graph layout: own layered layout instead of dagre/ELK
+**Decision.** `src/features/graph/layout.ts` (~90 lines) puts node types in columns in trace order: risk | requirement | story | module | api | entity | test. It orders each column by the barycentre of each node's neighbours, using alternating down/up sweeps (the Sugiyama crossing-reduction heuristic). It's deterministic, there's no dependency, and a unit test shows it removes crossings that the naive order has.
+**Rejected.** dagre (unmaintained fork, generic ranks ignore our type semantics). ELK (~1 MB of WASM/JS for a problem whose ranks we already know).
+
+## ADR-030 — Progress over fetch-based SSE, with polling fallback
+**Decision.** The native `EventSource` can't send an `Authorization` header, so `useJob` uses `@microsoft/fetch-event-source` with the bearer token. If the stream errors, it falls back to polling `GET /jobs/{id}` every 2 s. Together with the server's DB re-sync (ADR-020), progress always arrives.
+
+## ADR-031 — Frontend toolchain pins
+- **TypeScript 6.0, not 7.** `typescript-eslint` 8.x supports TS < 6.1, and the CI gate is `eslint` + `tsc`.
+- **ESLint 9, not 10.** `eslint-plugin-jsx-a11y` (accessibility rules) supports up to ESLint 9.
+- **React Flow v13**: dark mode follows the OS through CSS `light-dark()`, so the canvas is pinned with `forceColorMode="light"` (it rendered dark on a dark-mode machine in the first browser check).
+- **Accessibility:** jsx-a11y lint, a skip link, visible focus rings, `prefers-reduced-motion`, ARIA tabs, labelled meters and progress bars, keyboard-sortable kanban (dnd-kit keyboard sensor, plus a status `<select>` on every card), and an **Outline** tab that gives a text alternative to the canvas.
+
+## ADR-032 — The sandbox is seeded with verified samples and heals itself
+**Decision.** `python -m app.seed` and the nightly Celery beat task (`specforge.reset_sandbox`, 03:00 UTC) wipe the shared sandbox and restore the 4 curated samples **with their quality reports**. If a visitor empties the sandbox, the next demo login restores the samples immediately and queues their verification. A recruiter clicking "Try it instantly" sees four complete, scored blueprints with no LLM call.

@@ -1,10 +1,16 @@
-from fastapi import APIRouter, Request, Response, status
+import contextlib
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, Request, Response, status
 
 from app.api.deps import DB, CurrentUser
+from app.api.routes.jobs import get_enqueuer
 from app.core.config import get_settings
 from app.core.errors import Unauthorized
+from app.models.enums import JobKind
 from app.schemas.auth import LoginIn, RegisterIn, TokenOut, UserOut
-from app.services import auth_service, ratelimit
+from app.services import auth_service, ratelimit, samples
+from app.services import jobs as job_service
 from app.services.auth_service import TokenPair
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -43,7 +49,12 @@ def login(body: LoginIn, db: DB, response: Response) -> TokenOut:
 
 
 @router.post("/demo", response_model=TokenOut)
-def demo_login(request: Request, db: DB, response: Response) -> TokenOut:
+def demo_login(
+    request: Request,
+    db: DB,
+    response: Response,
+    enqueue: Annotated[job_service.Enqueue, Depends(get_enqueuer)],
+) -> TokenOut:
     """One-click recruiter login: editor on the shared sandbox project."""
     ip = request.client.host if request.client else "unknown"
     ratelimit.check(
@@ -51,6 +62,17 @@ def demo_login(request: Request, db: DB, response: Response) -> TokenOut:
         action="demo_login",
     )
     user = auth_service.ensure_demo_user(db)
+    for bp in samples.ensure_sandbox_samples(db):  # self-heal an empty sandbox
+        with contextlib.suppress(Exception):  # verification is best-effort here
+            job_service.create_job(
+                db,
+                bp,
+                user,
+                JobKind.verify,
+                idempotency_key=None,
+                params={},
+                enqueue=enqueue,
+            )
     return _respond(response, auth_service.issue_tokens(db, user))
 
 
