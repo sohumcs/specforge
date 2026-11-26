@@ -46,7 +46,8 @@ smoke:
 	cd backend && $(abspath $(PY)) scripts/e2e_smoke.py $(WEB_URL)
 
 e2e:
-	cd frontend && E2E_BASE_URL=$(WEB_URL) npx playwright test
+	cd frontend && (test -d node_modules || npm ci --no-audit --no-fund) \
+	  && npx playwright install chromium && E2E_BASE_URL=$(WEB_URL) npx playwright test
 
 # Deterministic run used by CI: offline DemoProvider, generous rate limits.
 e2e-ci:

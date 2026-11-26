@@ -73,6 +73,7 @@ cd backend && python -m venv .venv && .venv/Scripts/pip install -e ".[dev]" && .
 - `make dev | down | clean | logs | seed | e2e | e2e-ci | test | lint`; `scripts/dev.ps1` does the same on Windows.
 - Playwright (`frontend/e2e/`): full flow (register → project → generate → quality → fix → edit → impact → regenerate → kanban → export MD+PDF), recruiter demo path (< 10 s), axe WCAG A/AA checks on landing + workspace tabs, probes through the proxy; desktop + mobile (Pixel 7) projects.
 - Result against the compose stack in CI mode (`LLM_PROVIDERS=["demo"]`): **17/17 passing (3 consecutive runs)**.
+- **Fresh-clone check:** `git clone` from GitHub into an empty folder (no `backend/.env`, no `node_modules`) → `scripts\dev.ps1 e2e-ci` built the stack, installed frontend deps + Chromium, and passed 17/17 in 176 s. Make targets dry-run cleanly in WSL (`make -n dev e2e e2e-ci`).
 - Real bugs the e2e/axe run caught: a scrollable diagram that keyboard users couldn't scroll, a redundant nested ARIA label on the header gauge, plus the two nginx container gotchas (ADR-034).
 
 ## One-command local run
