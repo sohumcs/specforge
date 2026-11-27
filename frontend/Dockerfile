@@ -2,7 +2,7 @@
 # Static SPA served by unprivileged nginx (runs as uid 101, listens on 8080),
 # which also reverse-proxies /api to the backend so the browser sees one origin.
 
-FROM --platform=$BUILDPLATFORM node:22-alpine AS build
+FROM --platform=$BUILDPLATFORM node:26-alpine AS build
 WORKDIR /src
 COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
