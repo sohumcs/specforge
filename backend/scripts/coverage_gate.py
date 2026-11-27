@@ -28,7 +28,8 @@ def main() -> int:
     ap.add_argument("report", type=Path)
     ap.add_argument("--min", type=float, default=80.0)
     args = ap.parse_args()
-    files = {k.replace("\\", "/"): v for k, v in json.loads(args.report.read_text())["files"].items()}
+    report = json.loads(args.report.read_text())
+    files = {k.replace("\\", "/"): v for k, v in report["files"].items()}
     failed = False
     print(f"{'module':<34} {'what':<28} {'cover':>6}")
     for path, what in CORE.items():

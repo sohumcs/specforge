@@ -49,8 +49,12 @@ ENV PATH=/opt/venv/bin:$PATH \
     TOKENIZERS_PARALLELISM=false \
     GIT_SHA=${GIT_SHA}
 RUN groupadd --system --gid 10001 app && useradd --system --uid 10001 --gid app --home /app app \
- && apt-get update && apt-get install -y --no-install-recommends libgomp1 \
+ && apt-get update \
+ && apt-get upgrade -y --no-install-recommends \
+ && apt-get install -y --no-install-recommends libgomp1 \
  && rm -rf /var/lib/apt/lists/*
+# ^ apt-get upgrade applies Debian security fixes published after the base image
+#   was built (CI's Trivy gate fails on fixable HIGH/CRITICAL).
 COPY --from=builder /opt/venv /opt/venv
 COPY --from=models /opt/hf /opt/hf
 WORKDIR /app
