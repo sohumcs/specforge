@@ -178,3 +178,23 @@ Mutating jobs (generate, fix, regenerate) are serialised per blueprint (`409 JOB
 
 ## ADR-035 — Playwright e2e runs against the real compose stack
 **Decision.** `frontend/e2e/` drives the stack as a user would: register → create project → generate (live SSE progress) → Quality → Fix with AI → edit requirement → impact banner → Regenerate affected → kanban → export MD + PDF. There's also the recruiter path ("Try it instantly" opens a verified sample in < 10 s) and **axe-core WCAG 2 A/AA checks** (no serious/critical violations) on the landing page and the workspace tabs. `make e2e-ci` sets `LLM_PROVIDERS=["demo"]`, so CI is deterministic and spends no quota. The same tests run with real keys locally.
+
+## ADR-036 — CI gate: six jobs, SHA-pinned actions, per-module coverage
+**Status:** Accepted · 2026-11-27 (Phase 7)
+**Decision.** `.github/workflows/ci.yml` runs on every PR and every push to `main`:
+
+| Job | Fails the build on |
+|---|---|
+| Backend | ruff, mypy `--strict`, bandit, `alembic check` (migrations match models), pytest, **each** core module < 80 % coverage (`scripts/coverage_gate.py`), pip-audit (lock + CPU torch) |
+| Frontend | eslint (incl. jsx-a11y), tsc, vitest, `npm audit --audit-level=high`, production build |
+| Secrets | gitleaks over the full git history |
+| Images (backend, frontend) | docker build (GHA layer cache), Trivy: fixable HIGH/CRITICAL |
+| E2E | Playwright (17 tests, axe WCAG A/AA) + API smoke test against `docker compose`, offline LLM |
+
+**Supply chain.** In March 2026, 75+ tags of `aquasecurity/trivy-action` were force-pushed to a credential stealer (GHSA-69fq-xp46-6x23). Every third-party action here is therefore pinned to a **full commit SHA** (tag in a comment), mostly from immutable releases, and Dependabot proposes SHA bumps as reviewed PRs. The Trivy scanner is pinned to v0.76.2, a release from after the incident. The workflow token is `contents: read`, and checkouts use `persist-credentials: false`. I also declined to run `aquasec/trivy:latest` locally with the Docker socket mounted, because Trivy's Docker Hub images were also compromised in the same campaign.
+**Why per-module coverage.** The total was 94 % while RBAC (`access.py`) sat at 79 %. An average hides exactly the module where a gap is most dangerous. The gate caught it, and new tests took it to 100 %.
+**First run caught real issues.** 57 fixable HIGH/CRITICAL in a stale `nginx-unprivileged:1.29-alpine` base, plus one in Debian `libzstd1`. Fixed by moving to `1.31.7-alpine3.24` and applying `apk upgrade` / `apt-get upgrade` at build time. Run 2: 6/6 green.
+
+## ADR-037 — Branch protection on main
+**Decision.** `main` requires a pull request with **1 approving review** and all six CI checks passing on an up-to-date branch. Stale approvals are dismissed on new commits, conversations must be resolved, and force-pushes and deletion are blocked.
+**Trade-off (solo repo).** GitHub doesn't let you approve your own PR, so `enforce_admins` is **off**: the repository owner can merge after CI is green. Everyone else, including Dependabot, must get a review. If a second maintainer joins, turn `enforce_admins` on.

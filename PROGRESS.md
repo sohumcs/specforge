@@ -11,8 +11,9 @@ Resume a session by reading this file + `../Web/new-portfolio/SPECFORGE_BUILD_PR
 | 4. Verification engine | ✅ done 2026-11-26: 269 tests green, 94 % coverage, live E2E smoke passes |
 | 5. Frontend | ✅ done 2026-11-26: verified in a real browser; 28 Vitest + 280 pytest tests |
 | 6. Local full stack | ✅ done 2026-11-26: compose stack healthy, Playwright 17/17 passing (3 consecutive runs) |
-| 7. CI | ⏳ next |
-| 8–10 | not started |
+| 7. CI | ✅ done 2026-11-27: 6/6 checks green on PR #1, branch protection on main |
+| 8. Target A deploy | ⏳ next (needs accounts, see below) |
+| 9–10 | not started |
 
 ## Decisions made by Sohum
 - Repo `sohumcs/specforge` is **public**.
@@ -66,6 +67,14 @@ cd backend && python -m venv .venv && .venv/Scripts/pip install -e ".[dev]" && .
 - Checked in a real browser against the real API + worker: demo login → sample graph → select/trace → edit REQ-006 → 4 nodes stale + amber wave → regenerate (LLM) → contradiction resolved, score 92 → 98 → Fix with AI (CRUD) → kanban drag → status page → new brief generated end-to-end (Groq answered after Gemini's per-minute quota).
 - Tests: backend 280 (pytest, 94 % coverage), frontend 28 (Vitest + Testing Library); eslint, tsc, ruff, mypy, bandit clean.
 
+## Phase 7 — what exists
+- `.github/workflows/ci.yml`: backend / frontend / secrets / images (Trivy, x2) / e2e. All third-party actions SHA-pinned, read-only token. Details: ADR-036.
+- `backend/scripts/coverage_gate.py`: each core module (rules, scoring, graph, RBAC, auth) must be at least 80 %. Current: 90.6 % to 100 %.
+- `.github/dependabot.yml`: pip, npm, GitHub Actions (SHA bumps), both Dockerfiles, compose. Weekly, grouped. torch and the TS/ESLint majors are held back on purpose.
+- PR [#1](https://github.com/sohumcs/specforge/pull/1): run 1 failed on real findings (57 fixable OS CVEs in a stale nginx base, 1 in Debian, 1 lint error), and run 2 was **6/6 green**. Squash-merged.
+- Branch protection on `main` (ADR-037): PR + 1 review + 6 required checks; owner may bypass (solo repo).
+- From now on, changes go through PRs: `git checkout -b <type>/<topic>` → push → PR → green → merge.
+
 ## Phase 6 — what exists
 - `backend/Dockerfile`: one image (api/worker/beat/migrate/seed), CPU torch, models baked in (`HF_HUB_OFFLINE`), non-root, ~0.9 GB. `backend/requirements.lock` + `requirements-dev.lock` from `scripts/lock.sh` (uv, universal amd64/arm64, CUDA excluded).
 - `frontend/Dockerfile`: nginx-unprivileged serving the SPA and proxying the API (SSE unbuffered, security headers + CSP, `/metrics` hidden).
@@ -114,5 +123,5 @@ Torch comes from the CPU index: `pip install torch --index-url https://download.
 | Phase 8 | Oracle Cloud Free Tier account + API signing key; DuckDNS (sign in with GitHub) + token; UptimeRobot free account |
 | Phase 9 | Confirm the AWS student account type; sign in and generate credentials when we get there |
 
-## Next: Phase 7 (CI)
-GitHub Actions on PR: ruff + mypy, eslint + tsc, pytest with coverage gate (80 % on rule engine / graph / auth / scoring), vitest, bandit, pip-audit + npm audit, gitleaks, docker build, Trivy (fail on fixable HIGH/CRITICAL), terraform checks (once infra exists), Playwright against `docker compose` (`make e2e-ci`). Dependabot. Branch protection on main.
+## Next: Phase 8 (Target A: always-on free deploy)
+**Sohum first:** rotate the Gemini key; create an Oracle Cloud Free Tier account + API signing key; DuckDNS account + subdomain + token; UptimeRobot account. Then: Terraform (OCI provider: VCN, subnet, security list, A1.Flex 2 OCPU/12 GB VM, reserved IP), Ansible (harden: non-root user, SSH keys only, ufw, fail2ban, unattended-upgrades; install k3s), k8s manifests (kustomize), cert-manager + Let's Encrypt, CD workflow (multi-arch GHCR images, deploy, smoke test, automatic rollback), Prometheus + Grafana, nightly pg_dump to OCI Object Storage with a tested restore.
