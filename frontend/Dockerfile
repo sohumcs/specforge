@@ -9,11 +9,16 @@ RUN npm ci --no-audit --no-fund
 COPY . .
 RUN npm run build
 
-FROM nginxinc/nginx-unprivileged:1.29-alpine AS runtime
+FROM nginxinc/nginx-unprivileged:1.31.7-alpine3.24 AS runtime
 LABEL org.opencontainers.image.source="https://github.com/sohumcs/specforge" \
       org.opencontainers.image.description="SPECForge web: React SPA + API reverse proxy"
 ENV API_UPSTREAM=api:8000 \
     NGINX_ENVSUBST_FILTER=API_UPSTREAM
+# Apply Alpine security fixes published after the base image was built
+# (Trivy gates on fixable HIGH/CRITICAL), then drop back to the nginx user.
+USER root
+RUN apk upgrade --no-cache
+USER 101
 COPY nginx.conf.template /etc/nginx/templates/default.conf.template
 COPY security-headers.conf /etc/nginx/security-headers.conf
 COPY --from=build /src/dist /usr/share/nginx/html

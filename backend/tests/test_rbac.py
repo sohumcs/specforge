@@ -155,3 +155,46 @@ def test_owner_can_delete_project_but_not_sandbox(world, api, client):
     sandbox = api("get", "/projects", {"Authorization": f"Bearer {demo}"}).json()["items"][0]
     r = api("delete", f"/projects/{sandbox['id']}", world["h"]["admin"])
     assert r.status_code == 403 and r.json()["code"] == "SANDBOX_PROTECTED"
+
+
+ZERO = "00000000-0000-0000-0000-000000000000"
+
+
+@pytest.mark.parametrize(
+    "path",
+    [f"/projects/{ZERO}", f"/blueprints/{ZERO}", f"/nodes/{ZERO}", f"/nodes/{ZERO}/trace"],
+)
+def test_missing_resources_are_404_for_admins_too(world, api, path):
+    for role in ("owner", "admin"):
+        r = api("get", path, world["h"][role])
+        assert r.status_code == 404 and r.json()["code"] == "NOT_FOUND"
+
+
+@pytest.mark.parametrize(
+    ("role", "expected"),
+    [
+        ("viewer", 403),
+        ("outsider", 404),
+        ("editor", 204),
+        ("admin", 204),
+    ],
+)
+def test_edge_delete_rbac(world, api, role, expected):
+    h = world["h"]["owner"]
+    req = api(
+        "post", f"/blueprints/{world['bp']}/nodes", h, json={"type": "requirement", "title": "R"}
+    ).json()
+    edge = api(
+        "post",
+        f"/blueprints/{world['bp']}/edges",
+        h,
+        json={"src_id": req["id"], "dst_id": world["node"], "type": "refines"},
+    ).json()
+    assert api("delete", f"/edges/{edge['id']}", world["h"][role]).status_code == expected
+    if expected == 204:
+        assert api("delete", f"/edges/{edge['id']}", h).status_code == 404  # gone
+
+
+def test_admin_sees_any_project_without_membership(world, api):
+    r = api("get", f"/projects/{world['pid']}", world["h"]["admin"])
+    assert r.status_code == 200 and r.json()["my_role"] is None
